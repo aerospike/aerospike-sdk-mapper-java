@@ -5,13 +5,16 @@ import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordMapper;
 import com.aerospike.client.sdk.RecordReadContext;
 import com.aerospike.client.sdk.Session;
-import com.aerospike.mapper.tools.converters.MappingConverter;
 
 import java.util.Map;
 
 /**
  * JOM-backed implementation of the SDK's {@link RecordMapper} interface.
  * Bridges the JOM's introspection/conversion engine into the SDK's typed object mapping system.
+ *
+ * <p>This mapper requires a {@link RecordReadContext} for dependency resolution, so callers
+ * should always use the 4-arg {@link #fromMap(Map, Key, int, RecordReadContext)} overload.
+ * The 3-arg overload throws {@link UnsupportedOperationException}.</p>
  *
  * @param <T> the mapped entity type
  */
@@ -29,8 +32,9 @@ public class AeroRecordMapper<T> implements RecordMapper<T> {
 
     @Override
     public T fromMap(Map<String, Object> map, Key recordKey, int generation) {
-        Session session = baseMapper.asMapper().getSession();
-        return hydrate(map, recordKey, generation, session);
+        throw new UnsupportedOperationException(
+                "JOM requires a RecordReadContext for dependency resolution. " +
+                "Use the 4-arg fromMap(map, key, generation, ctx) overload.");
     }
 
     @Override

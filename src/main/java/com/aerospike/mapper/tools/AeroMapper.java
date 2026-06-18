@@ -7,6 +7,7 @@ import com.aerospike.client.sdk.RecordMappingFactory;
 import com.aerospike.client.sdk.RecordResult;
 import com.aerospike.client.sdk.RecordStream;
 import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.tools.converters.MappingConverter;
 import com.aerospike.mapper.tools.utils.MapperUtils;
@@ -306,6 +307,16 @@ public class AeroMapper implements IAeroMapper {
     @Override
     public RecordMappingFactory asMappingFactory() {
         return new AeroRecordMappingFactory(this);
+    }
+
+    @Override
+    public <T> TypedDataSet<T> getTypedDataSet(Class<T> clazz) {
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
+        String set = entry.getSetName();
+        if ("".equals(set)) {
+            set = null;
+        }
+        return TypedDataSet.of(entry.getNamespace(), set, clazz);
     }
 
     @Override

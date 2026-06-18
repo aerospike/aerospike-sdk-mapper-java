@@ -419,8 +419,11 @@ public abstract class BaseVirtualList<E> {
             return null;
         }
         if (listType == AerospikeEmbed.EmbedType.MAP) {
-            List<?> list = (List<?>) rawResult;
-            rawResult = list.isEmpty() ? null : list.get(0);
+            if (rawResult instanceof List<?> list) {
+                rawResult = list.isEmpty() ? null : list.get(0);
+            } else if (rawResult instanceof Map<?, ?> map) {
+                rawResult = map.isEmpty() ? null : map.entrySet().iterator().next();
+            }
         }
         if (rawResult == null) {
             return null;

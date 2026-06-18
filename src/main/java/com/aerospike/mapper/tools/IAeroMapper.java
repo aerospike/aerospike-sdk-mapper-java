@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.RecordMappingFactory;
+import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
 public interface IAeroMapper extends IBaseAeroMapper {
@@ -173,6 +174,17 @@ public interface IAeroMapper extends IBaseAeroMapper {
      * to enable the SDK's typed mapping features (TypedDataSet, TypedKey, etc.).
      */
     RecordMappingFactory asMappingFactory();
+
+    /**
+     * Return a {@link TypedDataSet} for the given annotated class, deriving the namespace and set
+     * from the {@code @AerospikeRecord} annotation. This allows users to work directly with
+     * the SDK's typed mapping features without manually wiring namespace/set.
+     *
+     * @param <T>   the entity type
+     * @param clazz the annotated entity class
+     * @return a TypedDataSet bound to the class's namespace, set, and type
+     */
+    <T> TypedDataSet<T> getTypedDataSet(Class<T> clazz);
 
     /**
      * Get the namespace associated with the passed class.
