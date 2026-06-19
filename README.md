@@ -6,5 +6,5 @@ query/scan support.
 
 **Status:** Work in progress.
 
-**SDK dependency:** Requires the `CLIENT-4861` branch of the Aerospike Java SDK (`com.aerospike:aerospike-client-sdk`), 
+**SDK dependency:** Requires the `stage` branch of the Aerospike Java SDK (`com.aerospike:aerospike-client-sdk`), 
 installed to the local Maven repository.
