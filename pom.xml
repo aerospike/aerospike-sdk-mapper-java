@@ -24,7 +24,6 @@
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.source.plugin.version>3.3.1</maven.source.plugin.version>
 		<maven.javadoc.plugin.version>3.3.0</maven.javadoc.plugin.version>
-		<maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
 		<maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
 		<maven-surefire-plugin.version>3.3.0</maven-surefire-plugin.version>
         <maven-central-publishing-plugin.version>0.10.0</maven-central-publishing-plugin.version>
@@ -160,25 +159,18 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-				<version>${maven.gpg.plugin.version}</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>${maven.compiler.plugin.version}</version>
 				<configuration>
 					<source>${maven.compiler.source}</source>
 					<target>${maven.compiler.target}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
 				</configuration>
 			</plugin>
 			<plugin>
