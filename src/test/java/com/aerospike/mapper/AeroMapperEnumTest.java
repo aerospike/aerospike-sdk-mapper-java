@@ -3,7 +3,7 @@ package com.aerospike.mapper;
 import com.aerospike.mapper.annotations.AerospikeEnum;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,7 +17,7 @@ public class AeroMapperEnumTest extends AeroMapperBaseTest {
         A a3 = new A(3, "c", 30, Status.COMPLICATED, Country.UNITED_STATES, Country.UNITED_STATES);
         A a4 = new A(4, "d", 40, null, null, null);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(a1);
         mapper.save(a2);
         mapper.save(a3);

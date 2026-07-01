@@ -6,7 +6,7 @@ import com.aerospike.mapper.AeroMapperBaseTest;
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeReference.ReferenceType;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -74,11 +74,11 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         public List<Account> accounts;
     }
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     //@BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         session.truncate(DataSet.of(NAMESPACE, "people"));
         session.truncate(DataSet.of(NAMESPACE, "account"));
     }

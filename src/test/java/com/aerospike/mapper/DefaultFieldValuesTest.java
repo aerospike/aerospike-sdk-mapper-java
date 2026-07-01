@@ -4,7 +4,7 @@ import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import static com.aerospike.client.sdk.Value.UseBoolBin;
@@ -36,7 +36,7 @@ public class DefaultFieldValuesTest extends AeroMapperBaseTest {
 
     @Test
     public void testDefaultValues() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         DefaultFieldsClass obj = new DefaultFieldsClass();
         obj.key = "dfc";
@@ -63,7 +63,7 @@ public class DefaultFieldValuesTest extends AeroMapperBaseTest {
 
     @Test
     public void testBooleanValue() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         DefaultFieldsClass obj = new DefaultFieldsClass();
         obj.key = "dfc";

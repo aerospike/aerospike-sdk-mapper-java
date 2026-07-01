@@ -12,17 +12,18 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.FromAerospike;
 import com.aerospike.mapper.annotations.ToAerospike;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class AeroMapperCustomConverterTest extends AeroMapperBaseTest {
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     @BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         truncateSet(NAMESPACE, "poker");
     }
 
@@ -125,9 +126,8 @@ public class AeroMapperCustomConverterTest extends AeroMapperBaseTest {
                 new Card('9', Suit.HEARTS),
                 Arrays.asList(new Card('4', Suit.CLUBS), new Card('A', Suit.HEARTS)));
 
-        mapper = new AeroMapper.Builder(session)
-                .addConverter(new CardConverter())
-                .build();
+        mapper = createMapper(MappingEngine.builder()
+                .addConverter(new CardConverter()));
 
         mapper.save(blackjackHand);
 

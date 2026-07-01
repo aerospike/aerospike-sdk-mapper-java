@@ -17,8 +17,9 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.model.preload.Animal;
 import com.aerospike.mapper.model.preload.Cat;
 import com.aerospike.mapper.model.preload.Dog;
-import com.aerospike.mapper.tools.AeroMapper;
 import com.aerospike.mapper.tools.ClassCache;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -61,7 +62,7 @@ public class PreloadingMethodsTest extends AeroMapperBaseTest {
 
     @Test
     public void TestWriteThenRead() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         Zoo zoo = createAnimalList();
         mapper.save(zoo);
@@ -71,7 +72,7 @@ public class PreloadingMethodsTest extends AeroMapperBaseTest {
 
     @Test
     public void TestWriteThenClearThenRead() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         Zoo zoo = createAnimalList();
         mapper.save(zoo);
@@ -88,13 +89,13 @@ public class PreloadingMethodsTest extends AeroMapperBaseTest {
 
     @Test
     public void TestWriteThenClearThenReadWithPreload() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         Zoo zoo = createAnimalList();
         mapper.save(zoo);
         ClassCache.getInstance().clear();
 
-        mapper = new AeroMapper.Builder(session).preLoadClass(Cat.class).preLoadClass(Dog.class).build();
+        mapper = createMapper(MappingEngine.builder().preLoadClass(Cat.class).preLoadClass(Dog.class));
 
         Zoo readZoo = mapper.read(Zoo.class, "103");
         assertEquals(zoo, readZoo);
@@ -102,13 +103,13 @@ public class PreloadingMethodsTest extends AeroMapperBaseTest {
 
     @Test
     public void TestWriteThenClearThenReadWithPreloadClasses() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         Zoo zoo = createAnimalList();
         mapper.save(zoo);
         ClassCache.getInstance().clear();
 
-        mapper = new AeroMapper.Builder(session).preLoadClasses(Cat.class, Dog.class).build();
+        mapper = createMapper(MappingEngine.builder().preLoadClasses(Cat.class, Dog.class));
 
         Zoo readZoo = mapper.read(Zoo.class, "103");
         assertEquals(zoo, readZoo);
@@ -116,13 +117,13 @@ public class PreloadingMethodsTest extends AeroMapperBaseTest {
 
     @Test
     public void TestWriteThenClearThenReadWithPreloadClassesFromPackage() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         Zoo zoo = createAnimalList();
         mapper.save(zoo);
         ClassCache.getInstance().clear();
 
-        mapper = new AeroMapper.Builder(session).preLoadClassesFromPackage(Cat.class).build();
+        mapper = createMapper(MappingEngine.builder().preLoadClassesFromPackage(Cat.class));
 
         Zoo readZoo = mapper.read(Zoo.class, "103");
         assertEquals(zoo, readZoo);

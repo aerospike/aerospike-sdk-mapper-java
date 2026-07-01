@@ -10,7 +10,9 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.annotations.AerospikeGeneration;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
 public class GenerationAnnotationTest extends AeroMapperBaseTest {
@@ -116,7 +118,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
 
     @Test
     public void testGenerationFieldMapping() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         
         // Start with a clean slate
         mapper.delete(GenerationEntity.class, 1);
@@ -136,7 +138,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
 
     @Test
     public void testGenerationFieldMappingWithInteger() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         // Start with a clean slate
         mapper.delete(GenerationEntityWithInteger.class, 2);
         
@@ -155,7 +157,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
 
     @Test
     public void testGenerationFieldMappingWithMethods() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         
         // Start with a clean slate
         mapper.delete(GenerationEntityWithMethods.class, 3);
@@ -175,7 +177,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
 
     @Test
     public void testOptimisticConcurrencyControl() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         
         // Start with a clean slate
         mapper.delete(GenerationEntity.class, 4);
@@ -204,7 +206,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
 
     @Test
     public void testGenerationIncrementOnUpdate() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         
         // Start with a clean slate
         mapper.delete(GenerationEntity.class, 5);
@@ -230,7 +232,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
     @Test
     public void testInvalidGenerationFieldType() {
         assertThrows(AerospikeException.class, () -> {
-            AeroMapper mapper = new AeroMapper.Builder(session).build();
+            MappingSession mapper = createMapper();
             InvalidGenerationEntity entity = new InvalidGenerationEntity();
             entity.id = 6;
             mapper.save(entity);
@@ -240,7 +242,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
     @Test
     public void testMultipleGenerationFields() {
         assertThrows(AerospikeException.class, () -> {
-            AeroMapper mapper = new AeroMapper.Builder(session).build();
+            MappingSession mapper = createMapper();
             MultipleGenerationEntity entity = new MultipleGenerationEntity();
             entity.id = 7;
             mapper.save(entity);
@@ -254,9 +256,7 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
                 .withFieldNamed("generation").asGenerationField()
                 .build();
         
-        AeroMapper mapper = new AeroMapper.Builder(session)
-                .withClassConfigurations(config)
-                .build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withClassConfigurations(config));
         
         // Start with a clean slate
         mapper.delete(GenerationEntity.class, 8);
@@ -269,27 +269,19 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Disabled("WritePolicy/GenerationPolicy API not available in new SDK")
     public void testWritePolicyGeneration() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         
-        // Start with a clean slate
         mapper.delete(GenerationEntity.class, 9);
 
-        // Create entity with specific generation
         GenerationEntity entity = new GenerationEntity(9, "Policy Test");
-        entity.setGeneration(5); // Set a specific generation
-        
-        // TODO: Adapt for SDK - WritePolicy/GenerationPolicy no longer available
-        // The SDK handles generation via @AerospikeGeneration annotation and
-        // .ensureGenerationIs() in the write builder.
-        // WritePolicy writePolicy = mapper.getWritePolicy(GenerationEntity.class);
-        // assertEquals(0, writePolicy.generation);
-        // assertEquals(GenerationPolicy.NONE, writePolicy.generationPolicy);
+        entity.setGeneration(5);
     }
 
     @Test
     public void testZeroGenerationDoesNotSetGeneration() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         
         // Start with a clean slate
         mapper.delete(GenerationEntity.class, 10);

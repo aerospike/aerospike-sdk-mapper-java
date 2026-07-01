@@ -11,7 +11,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class AeroMapperListOfObjectTransformTest extends AeroMapperBaseTest {
 
@@ -45,11 +45,11 @@ public class AeroMapperListOfObjectTransformTest extends AeroMapperBaseTest {
         }
     }
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     @BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         truncateSet("test", "testSet");
     }
 

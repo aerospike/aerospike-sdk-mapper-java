@@ -15,7 +15,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
 public class VirtualListWithKeyConstructorTest extends AeroMapperBaseTest {
@@ -197,7 +197,7 @@ public class VirtualListWithKeyConstructorTest extends AeroMapperBaseTest {
         collection.elements.add(new B(101, "joe", 23456, b, d, e, f));
         collection.elements.add(new B(100, "sue", 34567, c));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(collection);
         mapper.save(a, b, c, d, e, f, g, h, i, j);
 

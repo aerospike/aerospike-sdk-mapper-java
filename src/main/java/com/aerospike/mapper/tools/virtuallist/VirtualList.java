@@ -2,26 +2,56 @@ package com.aerospike.mapper.tools.virtuallist;
 
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
+import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.tools.IAeroMapper;
+import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.converters.MappingConverter;
 
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E> {
 
-    private final IAeroMapper aeroMapper;
+    private final MappingConverter mappingConverter;
 
     public VirtualList(@NotNull IAeroMapper mapper, @NotNull Class<?> owningClazz, @NotNull Object key,
                        @NotNull String binName, @NotNull Class<E> clazz) {
         super(mapper, null, owningClazz, key, binName, clazz);
-        this.aeroMapper = mapper;
+        this.mappingConverter = mapper.getMappingConverter();
     }
 
     public VirtualList(@NotNull IAeroMapper mapper, @NotNull Object object, @NotNull String binName,
                        @NotNull Class<E> clazz) {
         super(mapper, object, null, null, binName, clazz);
-        this.aeroMapper = mapper;
+        this.mappingConverter = mapper.getMappingConverter();
+    }
+
+    public VirtualList(Session session, @NotNull IBaseAeroMapper internalMapper, @NotNull Class<?> owningClazz,
+                       @NotNull Object key, @NotNull String binName, @NotNull Class<E> clazz) {
+        super(session, internalMapper, null, owningClazz, key, binName, clazz);
+        this.mappingConverter = internalMapper.getMappingConverter();
+    }
+
+    public VirtualList(Session session, @NotNull IBaseAeroMapper internalMapper, @NotNull Object object,
+                       @NotNull String binName, @NotNull Class<E> clazz) {
+        super(session, internalMapper, object, null, null, binName, clazz);
+        this.mappingConverter = internalMapper.getMappingConverter();
+    }
+
+    private VirtualList(VirtualList<E> source, Session newSession) {
+        super(newSession, source.mapper,
+                source.owningEntry, source.elementEntry, source.binName, source.listMapper,
+                source.listType, source.instanceMapper, source.key);
+        this.mappingConverter = source.mappingConverter;
+    }
+
+    /**
+     * Returns a new {@code VirtualList} view that uses the given session for
+     * the next (or subsequent) operations. The original list is unchanged.
+     */
+    public VirtualList<E> withSession(Session session) {
+        return new VirtualList<>(this, session);
     }
 
     public VirtualList<E> changeKey(Object newKey) {
@@ -200,7 +230,7 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
         Object rawResult = record.getValue(binName);
         E result = unpackSingleResult(rawResult);
         if (result != null) {
-            aeroMapper.getMappingConverter().resolveDependencies(getSession());
+            mappingConverter.resolveDependencies(getSession());
         }
         return result;
     }
@@ -222,7 +252,7 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
         }
         List<E> result = unpackListResult(record.getValue(binName));
         if (result != null && !result.isEmpty()) {
-            aeroMapper.getMappingConverter().resolveDependencies(getSession());
+            mappingConverter.resolveDependencies(getSession());
         }
         return result;
     }

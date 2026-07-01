@@ -9,7 +9,7 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeVersion;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class MessagesMappingTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testSet")
@@ -22,7 +22,7 @@ public class MessagesMappingTest extends AeroMapperBaseTest {
 
     @Test
     public void testVersion() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         InvalidVersion invalid = new InvalidVersion();
         invalid.id = 1;
         invalid.versioned = 3;

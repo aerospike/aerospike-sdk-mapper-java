@@ -16,7 +16,7 @@ import com.aerospike.client.sdk.DataSet;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class QueryTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testScan")
@@ -91,9 +91,9 @@ public class QueryTest extends AeroMapperBaseTest {
         add(new A(20, "Lucinda", 63));
     }};
 
-    private AeroMapper populate() {
+    private MappingSession populate() {
         session.truncate(DataSet.of("test", "testScan"));
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(data.toArray());
 
         // TODO: Adapt for SDK - index creation
@@ -103,7 +103,7 @@ public class QueryTest extends AeroMapperBaseTest {
 
     @Test
     public void queryTest() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
         mapper.query(A.class, (a) -> {
             System.out.println(a);
@@ -115,7 +115,7 @@ public class QueryTest extends AeroMapperBaseTest {
 
     @Test
     public void queryTestWithAbort() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         // TODO: Adapt for SDK - QueryPolicy.maxConcurrentNodes no longer available
         AtomicInteger counter = new AtomicInteger(0);
         mapper.query(A.class, (a) -> {
@@ -127,7 +127,7 @@ public class QueryTest extends AeroMapperBaseTest {
 
     @Test
     public void queryTestReturnsList() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
 
         List<A> result = mapper.query(A.class, "$.age >= 30 and $.age <= 54");
 
@@ -141,7 +141,7 @@ public class QueryTest extends AeroMapperBaseTest {
 
     @Test
     public void queryWithQueryPolicyTestReturnsList() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         // TODO: Adapt for SDK - QueryPolicy/Exp filter replaced by AEL expression
         // Original: QueryPolicy with filterExp = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")))
         // combined with Filter.range("age", 44, 78)

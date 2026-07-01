@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
+
 
 public class MapTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "A")
@@ -56,7 +57,7 @@ public class MapTest extends AeroMapperBaseTest {
         b.batchAs.put(14, a5);
         b.batchAs.put(15, a6);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(b);
         mapper.save(a1);
         mapper.save(a2);

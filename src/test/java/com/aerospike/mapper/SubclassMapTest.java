@@ -11,7 +11,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class SubclassMapTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "account")
@@ -67,7 +67,7 @@ public class SubclassMapTest extends AeroMapperBaseTest {
 
         container.accounts.add(savings);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 //		mapper.save(container.account);
         mapper.save(container);
 

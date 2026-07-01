@@ -8,12 +8,17 @@ import com.aerospike.client.sdk.Cluster;
 import com.aerospike.client.sdk.ClusterDefinition;
 import com.aerospike.client.sdk.DataSet;
 import com.aerospike.client.sdk.Key;
+import com.aerospike.client.sdk.Node;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordResult;
 import com.aerospike.client.sdk.RecordStream;
 import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.command.Info;
 import com.aerospike.client.sdk.policy.Behavior;
+import com.aerospike.client.sdk.util.Version;
 import com.aerospike.mapper.tools.ClassCache;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -26,6 +31,7 @@ public abstract class AeroMapperBaseTest {
     public static final String NAMESPACE = "test";
     protected static Cluster cluster;
     protected static Session session;
+    protected static boolean enterprise;
 
     @BeforeAll
     public static void setupClass() {
@@ -33,6 +39,15 @@ public abstract class AeroMapperBaseTest {
         int port = Integer.parseInt(System.getProperty("test.port", "3000"));
         cluster = new ClusterDefinition(host, port).connect();
         session = cluster.createSession(Behavior.DEFAULT);
+        enterprise = detectEnterprise();
+    }
+
+    private static boolean detectEnterprise() {
+        Node node = cluster.getNodes()[0];
+        String infoKey = node.getVersion().isGreaterOrEqual(Version.SERVER_VERSION_8_1)
+                ? "release" : "edition";
+        String value = Info.request(node, infoKey);
+        return value != null && value.contains("Enterprise");
     }
 
     @AfterAll
@@ -45,6 +60,21 @@ public abstract class AeroMapperBaseTest {
     @BeforeEach
     public void clearCache() {
         ClassCache.getInstance().clear();
+    }
+
+    /**
+     * Creates a {@link MappingSession} with a default (empty) engine.
+     */
+    protected static MappingSession createMapper() {
+        return createMapper(MappingEngine.builder());
+    }
+
+    /**
+     * Creates a {@link MappingSession} from a customized engine builder.
+     */
+    protected static MappingSession createMapper(MappingEngine.Builder builder) {
+        MappingEngine engine = builder.build();
+        return cluster.createSession(Behavior.DEFAULT, engine.sessionExtension());
     }
 
     protected static void truncateSet(String namespace, String setName) {

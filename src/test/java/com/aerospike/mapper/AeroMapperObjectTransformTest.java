@@ -10,7 +10,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class AeroMapperObjectTransformTest extends AeroMapperBaseTest {
     @AerospikeRecord()
@@ -61,7 +61,7 @@ public class AeroMapperObjectTransformTest extends AeroMapperBaseTest {
         account.txns2.add(new Transaction("details2", 200, 99));
         account.txns2.add(new Transaction("details3", 300, 1010));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(account);
 
         Account account2 = mapper.read(Account.class, 1);

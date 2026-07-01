@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class InheritanceTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "A")
@@ -42,7 +42,7 @@ public class InheritanceTest extends AeroMapperBaseTest {
 
     @Test
     public void run() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         A a = new A();
         a.id = 1;
         a.name = "test";

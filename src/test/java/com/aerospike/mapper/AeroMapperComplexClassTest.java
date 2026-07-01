@@ -8,7 +8,7 @@ import java.util.List;
 
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,11 +34,11 @@ public class AeroMapperComplexClassTest extends AeroMapperBaseTest {
         }
     }
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     @BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         truncateSet("test", "testSet");
     }
 

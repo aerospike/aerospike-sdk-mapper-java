@@ -4,7 +4,7 @@ import com.aerospike.client.sdk.DataSet;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -73,11 +73,11 @@ public class BatchLoadTest extends AeroMapperBaseTest {
         session.truncate(DataSet.of("test", "batchB"));
     }
 
-    private AeroMapper populate() {
+    private MappingSession populate() {
         session.truncate(DataSet.of("test", "batchA"));
         session.truncate(DataSet.of("test", "batchB"));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         mapper.save((Object[]) bees);
         mapper.save((Object[]) as);
@@ -87,7 +87,7 @@ public class BatchLoadTest extends AeroMapperBaseTest {
 
     @Test
     public void testBatchLoad() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
 
         B resultB = mapper.read(B.class, bees[1].id);
         compare(bees[1], resultB);
@@ -114,7 +114,7 @@ public class BatchLoadTest extends AeroMapperBaseTest {
 
     @Test
     public void testBatchLoadWithOperations() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
 
         B resultB = mapper.read(B.class, bees[1].id);
         compare(bees[1], resultB);

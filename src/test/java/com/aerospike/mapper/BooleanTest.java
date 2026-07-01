@@ -4,7 +4,8 @@ import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +42,7 @@ public class BooleanTest extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: id\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
         mapper.save(b);
 
         B b2 = mapper.read(B.class, 1);
@@ -70,7 +71,7 @@ public class BooleanTest extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: id\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
         mapper.save(b);
 
         B b2 = mapper.read(B.class, 1);
@@ -96,7 +97,7 @@ public class BooleanTest extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: id\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
         mapper.save(b);
 
         B b2 = mapper.read(B.class, 1);

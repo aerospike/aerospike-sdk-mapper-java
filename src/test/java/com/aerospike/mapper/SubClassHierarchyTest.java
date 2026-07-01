@@ -17,8 +17,8 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeReference;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
-import com.aerospike.mapper.tools.ClassCache;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.ClassCacheEntry;
 
 public class SubClassHierarchyTest extends AeroMapperBaseTest {
@@ -136,14 +136,18 @@ public class SubClassHierarchyTest extends AeroMapperBaseTest {
 
     @Test
     public void runTest() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingEngine.Builder engineBuilder = MappingEngine.builder()
+                .preLoadClasses(BaseClass.class, Customer.class, Account.class,
+                        Savings.class, Checking.class, Portfolio.class);
+        MappingSession mapper = createMapper(engineBuilder);
+        MappingEngine engine = mapper.getEngine();
 
-        ClassCacheEntry<BaseClass> baseClass = ClassCache.getInstance().loadClass(BaseClass.class, mapper);
-        ClassCacheEntry<Customer> customerClass = ClassCache.getInstance().loadClass(Customer.class, mapper);
-        ClassCacheEntry<Account> accountClass = ClassCache.getInstance().loadClass(Account.class, mapper);
-        ClassCacheEntry<Savings> savingsClass = ClassCache.getInstance().loadClass(Savings.class, mapper);
-        ClassCacheEntry<Checking> checkingClass = ClassCache.getInstance().loadClass(Checking.class, mapper);
-        ClassCacheEntry<Portfolio> portfolioClass = ClassCache.getInstance().loadClass(Portfolio.class, mapper);
+        ClassCacheEntry<BaseClass> baseClass = engine.loadClass(BaseClass.class);
+        ClassCacheEntry<Customer> customerClass = engine.loadClass(Customer.class);
+        ClassCacheEntry<Account> accountClass = engine.loadClass(Account.class);
+        ClassCacheEntry<Savings> savingsClass = engine.loadClass(Savings.class);
+        ClassCacheEntry<Checking> checkingClass = engine.loadClass(Checking.class);
+        ClassCacheEntry<Portfolio> portfolioClass = engine.loadClass(Portfolio.class);
 
         dumpClassCacheEntry(baseClass);
         dumpClassCacheEntry(customerClass);

@@ -6,8 +6,9 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
 import com.aerospike.mapper.tools.ClassCache;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testByteArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 0;
         annotatedClass.bytes = new byte[]{1, 2, 3, 4, 5};
@@ -46,7 +47,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 1;
@@ -66,7 +67,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testShortArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 2;
         annotatedClass.shorts = new short[]{1, 2, 3, 4, 5};
@@ -95,7 +96,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 3;
@@ -116,7 +117,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testIntArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 4;
         annotatedClass.ints = new int[]{1, 2, 3, 4, 5};
@@ -145,7 +146,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 5;
@@ -166,7 +167,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testLongArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 6;
         annotatedClass.longs = new long[]{1, 2, 3, 4, 5};
@@ -195,7 +196,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 7;
@@ -216,7 +217,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testFloatArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 8;
         annotatedClass.floats = new float[]{1, 2, 3, 4, 5};
@@ -245,7 +246,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 9;
@@ -266,7 +267,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testDoubleArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 10;
         annotatedClass.doubles = new double[]{1, 2, 3, 4, 5};
@@ -295,7 +296,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 11;
@@ -316,7 +317,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
 
     @Test
     public void testStringArray() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 12;
         annotatedClass.strings = new String[]{"the", "quick", "brown", "fox"};
@@ -345,7 +346,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 13;
@@ -367,7 +368,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
     @Test
     public void testClassArray() {
         ClassCache.getInstance().clear();
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         AnnotatedClass annotatedClass = new AnnotatedClass();
         annotatedClass.key = 14;
         annotatedClass.children = new ChildClass[]{
@@ -404,7 +405,7 @@ public class AeroMapperArrayTests extends AeroMapperBaseTest {
                         "    key:\n" +
                         "      field: key\n";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(config).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
 
         UnAnnotatedClass unAnnotatedClass = new UnAnnotatedClass();
         unAnnotatedClass.key = 15;

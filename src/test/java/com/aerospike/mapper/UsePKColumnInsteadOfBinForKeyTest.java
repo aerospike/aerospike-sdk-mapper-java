@@ -4,7 +4,8 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -47,14 +48,14 @@ public class UsePKColumnInsteadOfBinForKeyTest extends AeroMapperBaseTest {
 
     @Test
     public void runTest() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         A a = new A(1, "test");
         mapper.save(a);
 
         A readA = mapper.read(A.class, 1);
         assertEquals(1, readA.key1);
 
-        Record rawObject = readRawRecord(mapper.getRecordKey(a));
+        Record rawObject = readRawRecord(mapper.getEngine().getRecordKey(a));
         assertFalse(rawObject.bins.containsKey("key1"));
     }
 
@@ -69,14 +70,14 @@ public class UsePKColumnInsteadOfBinForKeyTest extends AeroMapperBaseTest {
                 "   key:\n" +
                 "     field: keyStr\n" +
                 "     storeAsBin: false\n";
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(yaml).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         B b = new B("key1", "test1");
         mapper.save(b);
 
         B readB = mapper.read(B.class, "key1");
         assertEquals("key1", readB.keyStr);
 
-        Record rawObject = readRawRecord(mapper.getRecordKey(b));
+        Record rawObject = readRawRecord(mapper.getEngine().getRecordKey(b));
         assertFalse(rawObject.bins.containsKey("keyStr"));
     }
 
@@ -89,20 +90,20 @@ public class UsePKColumnInsteadOfBinForKeyTest extends AeroMapperBaseTest {
                 .withKeyFieldAndStoreAsBin("keyStr", false).build();
         
         truncateSet(NAMESPACE, "testSet");
-        AeroMapper mapper = new AeroMapper.Builder(session).withClassConfigurations(classBConfig).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withClassConfigurations(classBConfig));
         B b = new B("key2", "test2");
         mapper.save(b);
 
         B readB = mapper.read(B.class, "key2");
         assertEquals("key2", readB.keyStr);
 
-        Record rawObject = readRawRecord(mapper.getRecordKey(b));
+        Record rawObject = readRawRecord(mapper.getEngine().getRecordKey(b));
         assertFalse(rawObject.bins.containsKey("keyStr"));
     }
     
     @Test
     public void runTestWithInvalidConfig() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         C c = new C(1, "test");
         assertThrows(AerospikeException.class, () -> {
             mapper.save(c);

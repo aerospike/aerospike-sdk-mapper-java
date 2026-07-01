@@ -2,7 +2,7 @@ package com.aerospike.mapper;
 
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -15,7 +15,7 @@ public class AnonymousReferencesTest extends AeroMapperBaseTest {
     @Test
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void runner() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         B b = new B();
         b.id = 2;
         b.name = "a B";

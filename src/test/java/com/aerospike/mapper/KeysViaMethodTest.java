@@ -4,7 +4,8 @@ import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -61,7 +62,7 @@ public class KeysViaMethodTest extends AeroMapperBaseTest {
         container.basicList = new ArrayList<>();
         container.basicList.add(basicClass);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(container);
         Container container2 = mapper.read(Container.class, 1);
         assertEquals(7, container2.basicList.get(0).id);
@@ -136,7 +137,7 @@ public class KeysViaMethodTest extends AeroMapperBaseTest {
         account.txnList.add(new Transaction(new Date(epochTime + account.daySinceEpoch * TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS) + 75000), 2222, "Test Transaction 2"));
         account.txnList.add(new Transaction(new Date(epochTime + account.daySinceEpoch * TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS) + 13 * 60 * 60 * 1000), 3333, "Test Transaction"));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(account);
 
         AccountTxnContainer result = mapper.read(AccountTxnContainer.class, "Tim-1");

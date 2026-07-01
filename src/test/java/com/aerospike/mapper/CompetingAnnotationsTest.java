@@ -13,7 +13,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeReference;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class CompetingAnnotationsTest extends AeroMapperBaseTest {
 
@@ -62,7 +62,7 @@ public class CompetingAnnotationsTest extends AeroMapperBaseTest {
 
     @Test
     public void testCompetingReferenceAndEmbedAnnotations() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         A a = new A();
         a.a = 2;
@@ -82,7 +82,7 @@ public class CompetingAnnotationsTest extends AeroMapperBaseTest {
 
     @Test
     public void testCompetingListReferenceAndEmbedAnnotations() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         CompetingListReferenceAndEmbedAnnotations b = new CompetingListReferenceAndEmbedAnnotations();
         b.key = 1;
@@ -97,7 +97,7 @@ public class CompetingAnnotationsTest extends AeroMapperBaseTest {
 
     @Test
     public void testMapCompetingReferenceAndEmbedAnnotations() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         CompetingMapReferenceAndEmbedAnnotations b = new CompetingMapReferenceAndEmbedAnnotations();
         b.key = 1;
@@ -111,7 +111,7 @@ public class CompetingAnnotationsTest extends AeroMapperBaseTest {
 
     @Test
     public void testCompetingArrayReferenceAndEmbedAnnotations() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         CompetingArrayReferenceAndEmbedAnnotations b = new CompetingArrayReferenceAndEmbedAnnotations();
         b.key = 1;

@@ -4,7 +4,7 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeReference;
 import com.aerospike.mapper.annotations.AerospikeReference.ReferenceType;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -57,7 +57,7 @@ public class ListOfReferencesTest extends AeroMapperBaseTest {
         container.items.add(new Item(300, new Date(), "Item 3"));
         container.items.add(new Item(400, new Date(), "Item 4"));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(container);
         for (int i = 0; i < container.items.size(); i++) {
             mapper.save(container.items.get(i));

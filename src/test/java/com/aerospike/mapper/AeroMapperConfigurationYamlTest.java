@@ -1,6 +1,7 @@
 package com.aerospike.mapper;
 
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,11 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AeroMapperConfigurationYamlTest extends AeroMapperBaseTest {
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     @BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         truncateSet(NAMESPACE, "testSet");
     }
 
@@ -47,7 +48,7 @@ public class AeroMapperConfigurationYamlTest extends AeroMapperBaseTest {
                         "        name: data\n";
 
         System.out.println(yaml);
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(yaml).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
 
         ContainerClass container = new ContainerClass();
         container.id = 123;

@@ -4,7 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -41,7 +42,7 @@ public class RecursiveObjectTest extends AeroMapperBaseTest {
         A a1 = new A("a", 10, 1);
         a1.a = a1;
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(a1);
 
         A a2 = mapper.read(A.class, a1.id);
@@ -57,7 +58,7 @@ public class RecursiveObjectTest extends AeroMapperBaseTest {
         B b = new B();
         b.id = 10;
         b.a = a1;
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(a1);
         mapper.save(b);
 
@@ -73,7 +74,7 @@ public class RecursiveObjectTest extends AeroMapperBaseTest {
         A a1 = new A("a", 10, 1);
         a1.a = new A("a2", 11, 11);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(a1, a1.a);
 
         A a2 = mapper.read(A.class, a1.id);

@@ -5,7 +5,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.ReturnType;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
@@ -56,7 +56,7 @@ public class VirtualListExample extends AeroMapperBaseTest {
         container.items.add(new Item(300, new Date(), "Item 3"));
         container.items.add(new Item(400, new Date(), "Item 4"));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(container);
 
         VirtualList<Item> list = mapper.asBackedList(container, "items", Item.class);

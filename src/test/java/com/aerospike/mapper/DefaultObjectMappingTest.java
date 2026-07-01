@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class DefaultObjectMappingTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testSet")
@@ -24,7 +24,7 @@ public class DefaultObjectMappingTest extends AeroMapperBaseTest {
 
     @Test
     public void test() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         Child child = new Child();
         child.age = 17;
         child.id = 3;

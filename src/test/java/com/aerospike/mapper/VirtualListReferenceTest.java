@@ -9,7 +9,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.ReturnType;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
@@ -67,7 +67,7 @@ public class VirtualListReferenceTest extends AeroMapperBaseTest {
         a.refs = new ArrayList<>();
         a.refs.add(b);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(a, b, c1, c2);
         VirtualList<B> list = mapper.asBackedList(a, "refs", B.class);
         List<B> results = list.getByKeyRange(b.id, b.id + 1, ReturnType.ELEMENTS);

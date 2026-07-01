@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 import com.aerospike.mapper.annotations.AerospikeExclude;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class FactoryConstructorTest extends AeroMapperBaseTest {
     public static class Factory {
@@ -72,7 +73,7 @@ public class FactoryConstructorTest extends AeroMapperBaseTest {
     public void runTest() {
         A a1 = new A("a", 10, 1);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(a1);
         A a2 = mapper.read(A.class, a1.id);
 
@@ -93,7 +94,7 @@ public class FactoryConstructorTest extends AeroMapperBaseTest {
                 + "  factoryMethod: createA1\n"
                 + "  factoryClass: com.aerospike.mapper.FactoryConstructorTest$Factory";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(yaml).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         mapper.save(a1);
         A a2 = mapper.read(A.class, a1.id);
 
@@ -115,7 +116,7 @@ public class FactoryConstructorTest extends AeroMapperBaseTest {
                 + "  factoryMethod: createA2\n"
                 + "  factoryClass: com.aerospike.mapper.FactoryConstructorTest$Factory";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(yaml).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         mapper.save(a1);
         A a2 = mapper.read(A.class, a1.id);
 
@@ -137,7 +138,7 @@ public class FactoryConstructorTest extends AeroMapperBaseTest {
                 + "  factoryMethod: createA3\n"
                 + "  factoryClass: com.aerospike.mapper.FactoryConstructorTest$Factory";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).withConfiguration(yaml).build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         mapper.save(a1);
         A a2 = mapper.read(A.class, a1.id);
 

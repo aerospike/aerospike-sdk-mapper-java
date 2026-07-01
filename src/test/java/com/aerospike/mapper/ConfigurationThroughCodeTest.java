@@ -7,14 +7,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.aerospike.client.sdk.AerospikeException;
-import com.aerospike.client.sdk.ClusterDefinition;
-import com.aerospike.client.sdk.Cluster;
-import com.aerospike.client.sdk.Session;
-import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
 import lombok.Data;
@@ -71,7 +69,7 @@ public class ConfigurationThroughCodeTest extends AeroMapperBaseTest {
     
     @Test
     public void testNoConfiguration() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         A a = setupA();
         mapper.delete(a);
         
@@ -87,28 +85,15 @@ public class ConfigurationThroughCodeTest extends AeroMapperBaseTest {
     
     @Test
     public void testWithInvalidConfiguration() {
-        try {
+        Assertions.assertThrows(AerospikeException.class, () -> {
             ClassConfig classConfigC = new ClassConfig.Builder(C.class)
                     .withKeyField("id1")
                     .build();
             ClassConfig classConfigB = new ClassConfig.Builder(B.class)
                     .withFieldNamed("c").beingEmbeddedAs(AerospikeEmbed.EmbedType.MAP)
                     .build();
-            
-            // TODO: Adapt for SDK - create a separate session for this invalid config test
-            Cluster tempCluster = new ClusterDefinition("172.17.0.2", 3000).connect();
-            Session tempSession = tempCluster.createSession(Behavior.DEFAULT);
-            try {
-                new AeroMapper.Builder(tempSession)
-                        .withClassConfigurations(classConfigB, classConfigC)
-                        .build();
-                Assertions.fail("Expected invalid configuration to throw an error");
-            } finally {
-                tempCluster.close();
-            }
-        }
-        catch (AerospikeException ignore) {
-        }
+            createMapper(MappingEngine.builder().withClassConfigurations(classConfigB, classConfigC));
+        });
     }
     
     @Test
@@ -119,9 +104,7 @@ public class ConfigurationThroughCodeTest extends AeroMapperBaseTest {
         ClassConfig classConfigB = new ClassConfig.Builder(B.class)
                 .withFieldNamed("c").beingEmbeddedAs(AerospikeEmbed.EmbedType.MAP)
                 .build();
-        AeroMapper mapper = new AeroMapper.Builder(session)
-                .withClassConfigurations(classConfigB, classConfigC)
-                .build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withClassConfigurations(classConfigB, classConfigC));
         A a = setupA();
         mapper.delete(a);
         

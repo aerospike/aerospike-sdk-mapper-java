@@ -20,7 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AeroMapper implements IAeroMapper {
+// TODO: Remove once ReactiveAeroMapper is migrated to MappingEngine + MappingSession
+class AeroMapper implements IAeroMapper {
 
     private final Session session;
     private final MappingConverter mappingConverter;
@@ -306,7 +307,9 @@ public class AeroMapper implements IAeroMapper {
 
     @Override
     public RecordMappingFactory asMappingFactory() {
-        return new AeroRecordMappingFactory(this);
+        throw new UnsupportedOperationException(
+                "asMappingFactory() is not supported on legacy AeroMapper. " +
+                "Use MappingEngine.installOn(cluster) instead.");
     }
 
     @Override

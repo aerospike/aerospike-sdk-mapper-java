@@ -2,7 +2,7 @@ package com.aerospike.mapper;
 
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.ReturnType;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 import org.junit.jupiter.api.Test;
@@ -171,7 +171,7 @@ public class VirtualListTest extends AeroMapperBaseTest {
         collection.elements.add(new B(101, "joe", 23456, b, d, e, f));
         collection.elements.add(new B(100, "sue", 34567, c));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(collection);
         mapper.save(a, b, c, d, e, f, g, h, i, j);
 
@@ -288,5 +288,28 @@ public class VirtualListTest extends AeroMapperBaseTest {
         assertEquals(3, results2.size());
         assertTrue(results2.containsAll(valueList));
         assertFalse(results2.contains(44444L));
+    }
+
+    @Test
+    public void testWithSession() {
+        A collection = new A();
+        collection.id = 100;
+        collection.elements.add(new B(1, "first", 100, new C(1, "a")));
+
+        MappingSession mapper = createMapper();
+        mapper.save(collection);
+
+        VirtualList<B> original = mapper.asBackedList(collection, "elements", B.class);
+        assertEquals(1, original.size());
+
+        MappingSession otherSession = mapper.sessionFor(com.aerospike.client.sdk.policy.Behavior.DEFAULT);
+        VirtualList<B> withOther = original.withSession(otherSession);
+
+        assertNotSame(original, withOther);
+        assertEquals(1, withOther.size());
+
+        withOther.append(new B(2, "second", 200, new C(2, "b")));
+        assertEquals(2, original.size());
+        assertEquals(2, withOther.size());
     }
 }

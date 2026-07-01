@@ -38,14 +38,21 @@ public abstract class BaseVirtualList<E> {
     protected final AerospikeEmbed.EmbedType listType;
     protected final Function<Object, Object> instanceMapper;
     protected final IBaseAeroMapper mapper;
+    protected final Session session;
     protected volatile Key key;
 
     protected BaseVirtualList(@NotNull IBaseAeroMapper mapper, Object object, Class<?> owningClazz, Object key,
                               @NotNull String binName, @NotNull Class<E> clazz) {
+        this(null, mapper, object, owningClazz, key, binName, clazz);
+    }
+
+    protected BaseVirtualList(Session session, @NotNull IBaseAeroMapper mapper, Object object, Class<?> owningClazz,
+                              Object key, @NotNull String binName, @NotNull Class<E> clazz) {
         if (object != null) {
             owningClazz = object.getClass();
         }
         this.mapper = mapper;
+        this.session = session;
         this.owningEntry = ClassCache.getInstance().loadClass(owningClazz, mapper);
         Object aerospikeKey;
         if (key == null) {
@@ -88,6 +95,26 @@ public abstract class BaseVirtualList<E> {
         this.instanceMapper = listMapper::fromAerospikeInstanceFormat;
     }
 
+    /**
+     * Copy constructor that replaces the session while sharing all other state.
+     * Used by {@code VirtualList.withSession()}.
+     */
+    protected BaseVirtualList(Session session, IBaseAeroMapper mapper,
+                              ClassCacheEntry<?> owningEntry, ClassCacheEntry<?> elementEntry,
+                              String binName, ListMapper listMapper,
+                              AerospikeEmbed.EmbedType listType, Function<Object, Object> instanceMapper,
+                              Key key) {
+        this.mapper = mapper;
+        this.session = session;
+        this.owningEntry = owningEntry;
+        this.elementEntry = elementEntry;
+        this.binName = binName;
+        this.listMapper = listMapper;
+        this.listType = listType;
+        this.instanceMapper = instanceMapper;
+        this.key = key;
+    }
+
     protected String alignedSet() {
         String set = owningEntry.getSetName();
         if ("".equals(set)) {
@@ -97,7 +124,7 @@ public abstract class BaseVirtualList<E> {
     }
 
     protected Session getSession() {
-        return mapper.getSession();
+        return session != null ? session : mapper.getSession();
     }
 
     protected Value getValue(Object javaObject, boolean isKey) {

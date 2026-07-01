@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
+
 
 /**
  * This test class requires positive nsup-period configured
@@ -31,8 +32,7 @@ public class TestCustomTtl extends AeroMapperBaseTest {
 	@Test
 	public void testTtl() {
         // This test requires positive nsup-period configured
-		AeroMapper mapper = new AeroMapper.Builder(session)
-				.build();
+		MappingSession mapper = createMapper();
 		
 		ClassWithTtl myRecord = new ClassWithTtl();
 		myRecord.id = 1;
@@ -57,8 +57,7 @@ public class TestCustomTtl extends AeroMapperBaseTest {
 	public void testTtlViaPolicy() {
         // This test requires positive nsup-period configured
 		// TODO: Adapt for SDK - write policy with expiration configured via builder
-		AeroMapper mapper = new AeroMapper.Builder(session)
-				.build();
+		MappingSession mapper = createMapper();
 		
 		ClassWithTtlViaPolicy myRecord = new ClassWithTtlViaPolicy();
 		myRecord.id = 1;

@@ -3,7 +3,7 @@ package com.aerospike.mapper.examples;
 import com.aerospike.mapper.AeroMapperBaseTest;
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.ReturnType;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
@@ -98,7 +98,7 @@ public class AdTechUseCaseExample extends AeroMapperBaseTest {
     }
 
     public void adTechUseCase() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         User user = new User("User1", new Date(), new ArrayList<>());
         mapper.save(user);

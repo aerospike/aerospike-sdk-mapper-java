@@ -12,17 +12,17 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Usage:
  * <pre>{@code
- * AeroMapper mapper = new AeroMapper.Builder(session).build();
- * cluster.setRecordMappingFactory(mapper.asMappingFactory());
+ * MappingEngine engine = MappingEngine.builder().build();
+ * engine.installOn(cluster);
  * }</pre>
  */
 public class AeroRecordMappingFactory implements RecordMappingFactory {
 
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private final ConcurrentHashMap<Class<?>, RecordMapper<?>> cache = new ConcurrentHashMap<>();
 
-    public AeroRecordMappingFactory(IBaseAeroMapper mapper) {
-        this.mapper = mapper;
+    public AeroRecordMappingFactory(MappingEngine engine) {
+        this.engine = engine;
     }
 
     @Override
@@ -32,11 +32,11 @@ public class AeroRecordMappingFactory implements RecordMappingFactory {
         if (cached != null) {
             return (RecordMapper<T>) cached;
         }
-        ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, mapper, false);
+        ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, engine.getInternalMapper(), false);
         if (entry == null) {
             return null;
         }
-        AeroRecordMapper<T> newMapper = new AeroRecordMapper<>(clazz, entry, mapper);
+        AeroRecordMapper<T> newMapper = new AeroRecordMapper<>(clazz, entry, engine);
         cache.putIfAbsent(clazz, newMapper);
         return (RecordMapper<T>) cache.get(clazz);
     }

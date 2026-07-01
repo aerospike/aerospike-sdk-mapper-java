@@ -5,7 +5,7 @@ import com.aerospike.mapper.annotations.AerospikeGetter;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeSetter;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import java.util.Date;
@@ -16,7 +16,7 @@ public class FinalFieldMappingTest extends AeroMapperBaseTest {
 
     @Test
     void test() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         Customer customer = new Customer();
         customer.id = 1;
         customer.name = "tim";

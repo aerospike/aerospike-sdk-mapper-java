@@ -2,13 +2,13 @@ package com.aerospike.mapper.examples;
 
 import com.aerospike.client.sdk.Cluster;
 import com.aerospike.client.sdk.ClusterDefinition;
-import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.examples.model.*;
 import com.aerospike.mapper.examples.model.accounts.Account;
 import com.aerospike.mapper.examples.model.accounts.LoanAccount;
 import com.aerospike.mapper.examples.model.accounts.PortfolioAccount;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -19,9 +19,9 @@ public class Application extends ApplicationBase {
 
     public void run() throws JsonProcessingException {
         Cluster cluster = new ClusterDefinition("127.0.0.1", 3000).connect();
-        Session session = cluster.createSession(Behavior.DEFAULT);
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingEngine engine = MappingEngine.builder().build();
+        MappingSession mapper = cluster.createSession(Behavior.DEFAULT, engine.sessionExtension());
 
         Address mailingAddress = new Address("773 Elm St", "Apt 2", "Grand Junction", "CO", "83451");
         Address billingAddress = new Address("123 Main St", null, "Denver", "CO", "80001");

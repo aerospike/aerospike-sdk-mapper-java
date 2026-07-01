@@ -5,7 +5,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 import org.junit.jupiter.api.Test;
 
@@ -67,7 +67,7 @@ public class CollectionMapperTest extends AeroMapperBaseTest {
         collection.elements.add(new CollectionElement(101, "joe", 23456));
         collection.elements.add(new CollectionElement(100, "sue", 34567));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(collection);
 
         VirtualList<CollectionElement> list = mapper.asBackedList(collection, "elements", CollectionElement.class);

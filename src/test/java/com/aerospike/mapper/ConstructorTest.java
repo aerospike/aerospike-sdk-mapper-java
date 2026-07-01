@@ -14,7 +14,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class ConstructorTest extends AeroMapperBaseTest {
 
@@ -56,7 +56,7 @@ public class ConstructorTest extends AeroMapperBaseTest {
     @Test
     public void test() {
         ConstructedClass data = new ConstructedClass(1, 19, "jane", new Date());
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(data);
         ConstructedClass data2 = mapper.read(ConstructedClass.class, 1);
         assertEquals(data.id, data2.id);
@@ -94,7 +94,7 @@ public class ConstructorTest extends AeroMapperBaseTest {
         data.b = 3;
         data.c = 4;
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(data);
         System.out.println("reading back");
         ConstructedClass2 data2 = mapper.read(ConstructedClass2.class, 1);
@@ -107,7 +107,7 @@ public class ConstructorTest extends AeroMapperBaseTest {
     @Test
     public void test3() {
         NoArgConstructorClass data = new NoArgConstructorClass(12, "tim");
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(data);
         NoArgConstructorClass data2 = mapper.read(NoArgConstructorClass.class, data.id);
         assertEquals(data.id, data2.id);
@@ -149,7 +149,7 @@ public class ConstructorTest extends AeroMapperBaseTest {
         ccc.list.add(new ConstructedClass3("c", 3, 4, 2));
         ccc.list.add(new ConstructedClass3("d", 4, 3, 1));
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(ccc);
         ConstructorContainerClass ccc2 = mapper.read(ConstructorContainerClass.class, 1);
         assertEquals(ccc.id, ccc2.id);

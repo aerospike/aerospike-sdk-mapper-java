@@ -7,7 +7,8 @@ import com.aerospike.mapper.annotations.AerospikeGetter;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.model.Person;
 import com.aerospike.mapper.model.PersonDifferentNames;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,11 +19,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class AeroMapperTest extends AeroMapperBaseTest {
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     @BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         truncateSet(NAMESPACE, "people");
         truncateSet(NAMESPACE, "account");
         truncateSet(NAMESPACE, "product");
@@ -77,7 +78,7 @@ public class AeroMapperTest extends AeroMapperBaseTest {
     @Test
     public void testDuplicateName() {
         try {
-            new AeroMapper.Builder(session).preLoadClass(DuplicateKeyClass.class).build();
+            createMapper(MappingEngine.builder().preLoadClass(DuplicateKeyClass.class));
             fail();
         } catch (Exception ignore) {
         }
@@ -86,7 +87,7 @@ public class AeroMapperTest extends AeroMapperBaseTest {
     @Test
     public void testMissingSetter() {
         try {
-            new AeroMapper.Builder(session).preLoadClass(PropertyWithNoSetter.class).build();
+            createMapper(MappingEngine.builder().preLoadClass(PropertyWithNoSetter.class));
             fail();
         } catch (Exception ignore) {
         }

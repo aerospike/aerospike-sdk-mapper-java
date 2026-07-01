@@ -1,32 +1,21 @@
 package com.aerospike.mapper.tools;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import jakarta.validation.constraints.NotNull;
-
-import org.apache.commons.lang3.StringUtils;
-
-import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.configuration.BinConfig;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 import com.aerospike.mapper.tools.configuration.Configuration;
 import com.aerospike.mapper.tools.utils.TypeUtils;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
 
+// TODO: Remove once ReactiveAeroMapper is migrated to MappingEngine + MappingSession
 public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
     private final T mapper;
     private List<Class<?>> classesToPreload = null;
@@ -56,21 +45,7 @@ public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
     }
 
     public String getPackageName(Class<?> clazz) {
-        Class<?> c;
-        if (clazz.isArray()) {
-            c = clazz.getComponentType();
-        } else {
-            c = clazz;
-        }
-        String pn;
-        if (c.isPrimitive()) {
-            pn = "java.lang";
-        } else {
-            String cn = c.getName();
-            int dot = cn.lastIndexOf('.');
-            pn = (dot != -1) ? cn.substring(0, dot).intern() : "";
-        }
-        return pn;
+        return BuilderHelper.getPackageName(clazz);
     }
 
     public AbstractBuilder<T> preLoadClassesFromPackage(Class<?> classInPackage) {
@@ -78,31 +53,13 @@ public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
     }
 
     public AbstractBuilder<T> preLoadClassesFromPackage(String thePackage) {
-        Set<Class<?>> clazzes = findAllClassesUsingClassLoader(thePackage);
+        Set<Class<?>> clazzes = BuilderHelper.findAllClassesUsingClassLoader(thePackage);
         for (Class<?> thisClazz : clazzes) {
-            // Only add classes with the AerospikeRecord annotation.
             if (thisClazz.getAnnotation(AerospikeRecord.class) != null) {
                 this.preLoadClass(thisClazz);
             }
         }
         return this;
-    }
-
-    // See https://www.baeldung.com/java-find-all-classes-in-package
-    private Set<Class<?>> findAllClassesUsingClassLoader(String packageName) {
-        InputStream stream = ClassLoader.getSystemClassLoader()
-                .getResourceAsStream(packageName.replaceAll("[.]", "/"));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        return reader.lines().filter(line -> line.endsWith(".class")).map(line -> getClass(line, packageName))
-                .collect(Collectors.toSet());
-    }
-
-    private Class<?> getClass(String className, String packageName) {
-        try {
-            return Class.forName(packageName + "." + className.substring(0, className.lastIndexOf('.')));
-        } catch (ClassNotFoundException ignored) {
-        }
-        return null;
     }
 
     public AbstractBuilder<T> preLoadClass(Class<?> clazz) {
@@ -128,9 +85,9 @@ public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
     }
 
     public AbstractBuilder<T> withConfigurationFile(InputStream ios, boolean allowsInvalid) throws IOException {
-        Yaml yaml = createYamlParser();
+        Yaml yaml = BuilderHelper.createYamlParser();
         Configuration configuration = yaml.load(ios);
-        this.loadConfiguration(configuration, allowsInvalid);
+        BuilderHelper.loadConfiguration(configuration, allowsInvalid, AbstractBuilder.class);
         return this;
     }
 
@@ -139,25 +96,10 @@ public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
     }
 
     public AbstractBuilder<T> withConfiguration(String configurationYaml, boolean allowsInvalid) {
-        Yaml yaml = createYamlParser();
+        Yaml yaml = BuilderHelper.createYamlParser();
         Configuration configuration = yaml.load(configurationYaml);
-        this.loadConfiguration(configuration, allowsInvalid);
+        BuilderHelper.loadConfiguration(configuration, allowsInvalid, AbstractBuilder.class);
         return this;
-    }
-
-    private static Yaml createYamlParser() {
-        Constructor constructor = new Constructor(Configuration.class, new LoaderOptions());
-
-        TypeDescription configDesc = new TypeDescription(Configuration.class);
-        configDesc.addPropertyParameters("classes", ClassConfig.class);
-        constructor.addTypeDescription(configDesc);
-
-        TypeDescription classConfigDesc = new TypeDescription(ClassConfig.class);
-        classConfigDesc.substituteProperty("class", String.class, "getClassName", "setClassName");
-        classConfigDesc.addPropertyParameters("bins", BinConfig.class);
-        constructor.addTypeDescription(classConfigDesc);
-
-        return new Yaml(constructor);
     }
 
     public AbstractBuilder<T> withClassConfigurations(ClassConfig classConfig, ClassConfig ...classConfigs) {
@@ -168,35 +110,6 @@ public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
         }
         ClassCache.getInstance().addConfiguration(configuration);
         return this;
-
-    }
-
-    private void loadConfiguration(@NotNull Configuration configuration, boolean allowsInvalid) {
-        if (configuration == null) {
-            throw new AerospikeException("YAML configuration is empty or invalid");
-        }
-        for (ClassConfig config : configuration.getClasses()) {
-            try {
-                String name = config.getClassName();
-                if (StringUtils.isBlank(name)) {
-                    throw new AerospikeException("Class with blank name in configuration file");
-                } else {
-                    try {
-                        Class.forName(config.getClassName());
-                    } catch (ClassNotFoundException e) {
-                        throw new AerospikeException("Cannot find a class with name " + name);
-                    }
-                }
-            } catch (RuntimeException re) {
-                if (allowsInvalid) {
-                    System.getLogger(AbstractBuilder.class.getName())
-                            .log(System.Logger.Level.WARNING, "Ignoring issue with configuration: " + re.getMessage());
-                } else {
-                    throw re;
-                }
-            }
-        }
-        ClassCache.getInstance().addConfiguration(configuration);
     }
 
     public T build() {

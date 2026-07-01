@@ -12,16 +12,17 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeOrdinal;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeVersion;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.BeforeEach;
 
 public class AeroMapperListTest extends AeroMapperBaseTest {
 
-    private AeroMapper mapper;
+    private MappingSession mapper;
 
     @BeforeEach
     public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
+        mapper = createMapper();
         truncateSet(NAMESPACE, "testSet");
     }
 
@@ -221,7 +222,7 @@ public class AeroMapperListTest extends AeroMapperBaseTest {
         value.b = 2;
         value.c = 3;
         value.d = 4;
-        List<Object> list = mapper.getMappingConverter().convertToList(value);
+        List<Object> list = mapper.getEngine().getMappingConverter().convertToList(value);
         assertEquals(4, list.size());
         // Note that "b" is ordinal 1, so it should be first in the list, then a, c, d
         assertEquals(2, list.get(0));
@@ -229,7 +230,7 @@ public class AeroMapperListTest extends AeroMapperBaseTest {
         assertEquals(3, list.get(2));
         assertEquals(4, list.get(3));
 
-        TestV1 value2 = mapper.getMappingConverter().convertToObject(TestV1.class, list);
+        TestV1 value2 = mapper.getEngine().getMappingConverter().convertToObject(TestV1.class, list);
         assertEquals(value.a, value2.a);
         assertEquals(value.b, value2.b);
         assertEquals(value.c, value2.c);

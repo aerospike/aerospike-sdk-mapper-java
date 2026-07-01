@@ -12,7 +12,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -112,7 +112,7 @@ public class BaseClassWithNoAttributesTest extends AeroMapperBaseTest {
 
     @Test
     public void runTest() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         Zoo zoo = new Zoo();
         zoo.setZooId("103");

@@ -14,7 +14,9 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.FromAerospike;
 import com.aerospike.mapper.annotations.ToAerospike;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
+
 
 public class DateCustomConverterTest extends AeroMapperBaseTest {
 
@@ -47,7 +49,7 @@ public class DateCustomConverterTest extends AeroMapperBaseTest {
 
     @Test
     public void testSave() throws ParseException {
-        AeroMapper convertingMapper = new AeroMapper.Builder(session).addConverter(new DateConverter()).build();
+        MappingSession convertingMapper = createMapper(MappingEngine.builder().addConverter(new DateConverter()));
 
         Date date = new Date();
 

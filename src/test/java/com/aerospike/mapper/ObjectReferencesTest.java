@@ -6,7 +6,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class ObjectReferencesTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "parent")
@@ -36,7 +36,7 @@ public class ObjectReferencesTest extends AeroMapperBaseTest {
         parent.id = 1;
         parent.child = child;
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(parent);
         mapper.save(child);
     }

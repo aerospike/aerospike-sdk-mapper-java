@@ -3,7 +3,7 @@ package com.aerospike.mapper;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,7 +22,7 @@ public class EmbeddedClassTest extends AeroMapperBaseTest {
     void testEmbed() {
         Embed2 embed2 = new Embed2(Collections.singletonList(new Embed3("s3", "s4")));
         Embed1 record = new Embed1(Collections.singletonList(embed2), new Embed3("s1", "s2"), "id");
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         mapper.save(record);
         Embed1 read = mapper.read(Embed1.class, record.getId());
@@ -32,7 +32,7 @@ public class EmbeddedClassTest extends AeroMapperBaseTest {
     @Test
     void testDerived() {
         Derived derived = new Derived("str1", 1);
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         mapper.save(derived);
         Derived read = mapper.read(Derived.class, derived.getStr());

@@ -22,12 +22,12 @@ public class AeroRecordMapper<T> implements RecordMapper<T> {
 
     private final Class<T> clazz;
     private final ClassCacheEntry<T> entry;
-    private final IBaseAeroMapper baseMapper;
+    private final MappingEngine engine;
 
-    public AeroRecordMapper(Class<T> clazz, ClassCacheEntry<T> entry, IBaseAeroMapper baseMapper) {
+    public AeroRecordMapper(Class<T> clazz, ClassCacheEntry<T> entry, MappingEngine engine) {
         this.clazz = clazz;
         this.entry = entry;
-        this.baseMapper = baseMapper;
+        this.engine = engine;
     }
 
     @Override
@@ -50,7 +50,7 @@ public class AeroRecordMapper<T> implements RecordMapper<T> {
         try {
             ThreadLocalKeySaver.save(recordKey);
             T result = entry.constructAndHydrate(recordKey, rec);
-            baseMapper.getMappingConverter().resolveDependencies(session);
+            engine.getMappingConverter().resolveDependencies(session);
             return result;
         } finally {
             ThreadLocalKeySaver.clear();

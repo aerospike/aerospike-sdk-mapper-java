@@ -4,7 +4,7 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +30,7 @@ public class InsertOnlyTest extends AeroMapperBaseTest {
 
     @Test
     public void testInsertOnly() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         DataClass dataClass = new DataClass();
         dataClass.a = 1;

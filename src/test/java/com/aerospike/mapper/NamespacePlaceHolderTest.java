@@ -3,7 +3,8 @@ package com.aerospike.mapper;
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
@@ -31,7 +32,7 @@ public class NamespacePlaceHolderTest extends AeroMapperBaseTest {
         placeHolderModel1.name = "name1";
         placeHolderModel1.email = "name1@gmail.com";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(placeHolderModel1);
 
         PlaceHolderModel placeHolderModelRead = mapper.read(PlaceHolderModel.class, placeHolderModel1.id);
@@ -48,7 +49,7 @@ public class NamespacePlaceHolderTest extends AeroMapperBaseTest {
         placeHolderModel1.name = "name1";
         placeHolderModel1.email = "name1@gmail.com";
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         try {
             mapper.save(placeHolderModel1);

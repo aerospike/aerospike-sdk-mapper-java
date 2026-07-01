@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeGeneration;
-import com.aerospike.mapper.tools.AeroMapper;
 import com.aerospike.mapper.tools.ClassCacheEntry;
-import com.aerospike.mapper.tools.utils.MapperUtils;
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class GenerationNotStoredTest extends AeroMapperBaseTest {
 
@@ -40,11 +40,12 @@ public class GenerationNotStoredTest extends AeroMapperBaseTest {
 
     @Test
     public void testGenerationFieldNotStoredAsBin() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
+        MappingEngine engine = mapper.getEngine();
         EntityWithGeneration entity = new EntityWithGeneration(1, "test");
         entity.setGeneration(5);
 
-        ClassCacheEntry<EntityWithGeneration> entry = MapperUtils.getEntryAndValidateNamespace(EntityWithGeneration.class, mapper);
+        ClassCacheEntry<EntityWithGeneration> entry = engine.loadClass(EntityWithGeneration.class);
         Map<String, Object> binMap = entry.getMap(entity, false, null);
 
         assertTrue(binMap.containsKey("name"), "Should find 'name' bin");

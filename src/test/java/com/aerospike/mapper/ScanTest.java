@@ -15,7 +15,7 @@ import com.aerospike.client.sdk.DataSet;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class ScanTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testScan")
@@ -76,16 +76,16 @@ public class ScanTest extends AeroMapperBaseTest {
         add(new Person(6, "Bob", 78));
     }};
 
-    private AeroMapper populate() {
+    private MappingSession populate() {
         session.truncate(DataSet.of("test", "testScan"));
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(data.toArray());
         return mapper;
     }
 
     @Test
     public void scanTest() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
         mapper.scan(Person.class, (a) -> {
             counter.incrementAndGet();
@@ -96,7 +96,7 @@ public class ScanTest extends AeroMapperBaseTest {
 
     @Test
     public void scanTestWithFilter() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
         // TODO: Adapt for SDK - ScanPolicy/Exp filter replaced by AEL expression
         // Original: ScanPolicy with filterExp = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")))
@@ -111,7 +111,7 @@ public class ScanTest extends AeroMapperBaseTest {
 
     @Test
     public void scanTestWithAbort() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
         // TODO: Adapt for SDK - ScanPolicy.maxConcurrentNodes no longer available
         mapper.scan(Person.class, (a) -> {
@@ -123,7 +123,7 @@ public class ScanTest extends AeroMapperBaseTest {
 
     @Test
     public void scanTestReturnsList() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
 
         List<Person> result = mapper.scan(Person.class);
 
@@ -136,7 +136,7 @@ public class ScanTest extends AeroMapperBaseTest {
 
     @Test
     public void scanWithScanPolicyTestReturnsList() {
-        AeroMapper mapper = populate();
+        MappingSession mapper = populate();
         // TODO: Adapt for SDK - ScanPolicy/Exp filter replaced by AEL expression
         // Original: ScanPolicy with filterExp = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")))
 

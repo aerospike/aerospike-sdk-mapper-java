@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test;
 import com.aerospike.mapper.GenerationAnnotationTest.GenerationEntity;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+
+import com.aerospike.mapper.tools.MappingEngine;
+import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
 public class GenerationConfigurationTest extends AeroMapperBaseTest {
@@ -43,9 +45,7 @@ public class GenerationConfigurationTest extends AeroMapperBaseTest {
                 .withFieldNamed("generation").asGenerationField()
                 .build();
         
-        AeroMapper mapper = new AeroMapper.Builder(session)
-                .withClassConfigurations(config)
-                .build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withClassConfigurations(config));
         
         // Start with a clean slate
         mapper.delete(ConfigGenerationEntity.class, 1);
@@ -71,9 +71,7 @@ public class GenerationConfigurationTest extends AeroMapperBaseTest {
                 "      - field: generation\n" +
                 "        generation: true\n";
         
-        AeroMapper mapper = new AeroMapper.Builder(session)
-                .withConfiguration(yamlConfig)
-                .build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yamlConfig));
         
         // Start with a clean slate
         mapper.delete(ConfigGenerationEntity.class, 2);
@@ -98,9 +96,7 @@ public class GenerationConfigurationTest extends AeroMapperBaseTest {
                 .withFieldNamed("generation").asGenerationField()
                 .build();
         
-        AeroMapper mapper = new AeroMapper.Builder(session)
-                .withClassConfigurations(config)
-                .build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withClassConfigurations(config));
         
         // Start with a clean slate
         mapper.delete(ConfigGenerationEntity.class, 3);
@@ -134,9 +130,7 @@ public class GenerationConfigurationTest extends AeroMapperBaseTest {
                 .withFieldNamed("generation").asGenerationField()
                 .build();
         
-        AeroMapper mapper = new AeroMapper.Builder(session)
-                .withClassConfigurations(config)
-                .build();
+        MappingSession mapper = createMapper(MappingEngine.builder().withClassConfigurations(config));
         
         // Start with a clean slate
         mapper.delete(ConfigGenerationEntity.class, 4);

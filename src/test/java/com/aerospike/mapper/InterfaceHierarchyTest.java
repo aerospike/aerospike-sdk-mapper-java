@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -96,7 +96,7 @@ public class InterfaceHierarchyTest extends AeroMapperBaseTest {
 
     @Test
     public void runTest() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         Container container = new Container(
                 new SubClass1("Bob"),
                 new SubClass2("Fred"),
@@ -110,7 +110,7 @@ public class InterfaceHierarchyTest extends AeroMapperBaseTest {
 
     @Test
     public void runNestedTest() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         NestedContainer container = new NestedContainer(
                 new SubClass1("Bob"),
                 new SubClass2("Fred"),

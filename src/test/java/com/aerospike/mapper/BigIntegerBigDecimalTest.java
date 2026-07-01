@@ -2,7 +2,7 @@ package com.aerospike.mapper;
 
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,7 +29,7 @@ public class BigIntegerBigDecimalTest extends AeroMapperBaseTest {
 
     @Test
     public void runTest() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         BigTypes types = new BigTypes(1, "test", new BigDecimal("123456789.123456789"), new BigInteger("12345678901234567890"));
         mapper.save(types);
         BigTypes readTypes = mapper.read(BigTypes.class, 1);

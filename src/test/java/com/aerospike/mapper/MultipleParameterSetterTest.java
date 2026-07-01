@@ -11,7 +11,7 @@ import com.aerospike.mapper.annotations.AerospikeGetter;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeSetter;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 
 public class MultipleParameterSetterTest extends AeroMapperBaseTest {
 
@@ -75,7 +75,7 @@ public class MultipleParameterSetterTest extends AeroMapperBaseTest {
         b.key = "B-1";
         b.a = a;
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
         mapper.save(b);
         B b2 = mapper.read(B.class, b.key);
 

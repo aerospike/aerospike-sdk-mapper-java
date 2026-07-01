@@ -5,7 +5,7 @@ import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.AeroMapper;
+import com.aerospike.mapper.tools.MappingSession;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -21,7 +21,7 @@ public class LocalDateConverterTest extends AeroMapperBaseTest {
 
     @Test
     public void testLocalDateTypes() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         LocalDateTimeContainer container = new LocalDateTimeContainer();
         container.id = 1;
@@ -49,7 +49,7 @@ public class LocalDateConverterTest extends AeroMapperBaseTest {
 
     @Test
     public void testEmbeddedLocalDateTypes() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+        MappingSession mapper = createMapper();
 
         LocalDateTimeContainer container = new LocalDateTimeContainer();
         container.id = 10;
