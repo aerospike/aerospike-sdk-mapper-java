@@ -1,6 +1,15 @@
 package com.aerospike.mapper;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import com.aerospike.client.sdk.DataSet;
+import com.aerospike.client.sdk.Key;
+import com.aerospike.client.sdk.Record;
+import com.aerospike.client.sdk.RecordResult;
+import com.aerospike.client.sdk.RecordStream;
+import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
@@ -112,6 +121,12 @@ public class BatchLoadTest extends AeroMapperBaseTest {
         compare(results[5], null);
     }
 
+    /**
+     * Validates that MappingSession (as a Session) supports batch CDT operations
+     * on mapper-managed sets. Mapper-level batch read and object conversion are
+     * covered by {@link #testBatchLoad()}; CDT operation results have a different
+     * structure than stored bins and cannot go through convertToObject.
+     */
     @Test
     public void testBatchLoadWithOperations() {
         MappingSession mapper = populate();
@@ -122,31 +137,37 @@ public class BatchLoadTest extends AeroMapperBaseTest {
         A resultA = mapper.read(A.class, as[1].id);
         compare(as[1], resultA);
 
-        Integer[] userKeys = new Integer[6];
-        userKeys[0] = as[4].id;
-        userKeys[1] = as[7].id;
-        userKeys[2] = as[5].id;
-        userKeys[3] = as[0].id;
-        userKeys[4] = as[1].id;
-        userKeys[5] = 3000;
+        String ns = mapper.getEngine().getNamespace(A.class);
+        String set = mapper.getEngine().getSet(A.class);
 
-        // TODO: Adapt for SDK - Operation/ListOperation/ListReturnType from CDT API no longer available
-        // Original: Operation[] with ListOperation.size(DATA_BIN) and ListOperation.getByIndex(DATA_BIN, -1, ListReturnType.VALUE)
-        // SDK uses fluent CDT API; mapper.read(Class, keys, Operation[]) may need SDK equivalent
-        // Operation[] ops = new Operation[2];
-        // ops[0] = ListOperation.size(DATA_BIN);
-        // ops[1] = ListOperation.getByIndex(DATA_BIN, -1, ListReturnType.VALUE);
-        // A[] results = mapper.read(A.class, userKeys, ops);
-        // compare(results[0].data.get(0).id, 10);
-        // compare(results[0].data.get(1).id, as[4].data.get(as[4].data.size() - 1).id);
-        // compare(results[1].data.get(0).id, 10);
-        // compare(results[1].data.get(1).id, as[7].data.get(as[7].data.size() - 1).id);
-        // compare(results[2].data.get(0).id, 10);
-        // compare(results[2].data.get(1).id, as[5].data.get(as[5].data.size() - 1).id);
-        // compare(results[3].data.get(0).id, 10);
-        // compare(results[3].data.get(1).id, as[0].data.get(as[0].data.size() - 1).id);
-        // compare(results[4].data.get(0).id, 10);
-        // compare(results[4].data.get(1).id, as[1].data.get(as[1].data.size() - 1).id);
-        // compare(results[5], null);
+        int[] asIndices = {4, 7, 5, 0, 1};
+        List<Key> keys = new ArrayList<>(6);
+        for (int idx : asIndices) {
+            keys.add(new Key(ns, set, Value.get(as[idx].id)));
+        }
+        keys.add(new Key(ns, set, Value.get(3000)));
+
+        RecordResult[] results = new RecordResult[keys.size()];
+        try (RecordStream stream = mapper.query(keys)
+                .bin(DATA_BIN).listSize()
+                .bin(DATA_BIN).onListIndex(-1).getValues()
+                .includeMissingKeys()
+                .execute()) {
+            while (stream.hasNext()) {
+                RecordResult rr = stream.next();
+                results[rr.index()] = rr;
+            }
+        }
+
+        for (int i = 0; i < asIndices.length; i++) {
+            assertNotNull(results[i].recordOrNull(), "Expected record for as[" + asIndices[i] + "]");
+            Record record = results[i].recordOrThrow();
+            assertEquals(10L, record.operationResult(0).getLong());
+            int lastBId = as[asIndices[i]].data.get(as[asIndices[i]].data.size() - 1).id;
+            assertEquals((long) lastBId, record.operationResult(1).getLong());
+        }
+
+        assertNotNull(results[5], "Expected result entry for missing key");
+        assertNull(results[5].recordOrNull());
     }
 }
