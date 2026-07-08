@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import com.aerospike.client.sdk.DataSet;
+import com.aerospike.client.sdk.exp.Exp;
+import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
@@ -98,22 +100,25 @@ public class ScanTest extends AeroMapperBaseTest {
     public void scanTestWithFilter() {
         MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
-        // TODO: Adapt for SDK - ScanPolicy/Exp filter replaced by AEL expression
-        // Original: ScanPolicy with filterExp = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")))
         mapper.scan(Person.class, (a) -> {
             counter.incrementAndGet();
             return true;
-        });
-        // TODO: Update assertion once AEL-based scan filter is implemented
-        // Was: assertEquals(2, counter.get()) with name="Bob" filter
-        assertEquals(6, counter.get());
+        }, "$.name == \"Bob\"");
+        assertEquals(2, counter.get());
+
+        counter.set(0);
+        Expression bobFilter = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")));
+        mapper.scan(Person.class, (a) -> {
+            counter.incrementAndGet();
+            return true;
+        }, bobFilter);
+        assertEquals(2, counter.get());
     }
 
     @Test
     public void scanTestWithAbort() {
         MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
-        // TODO: Adapt for SDK - ScanPolicy.maxConcurrentNodes no longer available
         mapper.scan(Person.class, (a) -> {
             counter.incrementAndGet();
             return false;
@@ -135,19 +140,21 @@ public class ScanTest extends AeroMapperBaseTest {
     }
 
     @Test
-    public void scanWithScanPolicyTestReturnsList() {
+    public void scanWithFilterTestReturnsList() {
         MappingSession mapper = populate();
-        // TODO: Adapt for SDK - ScanPolicy/Exp filter replaced by AEL expression
-        // Original: ScanPolicy with filterExp = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")))
 
-        List<Person> result = mapper.scan(Person.class);
-
-        // TODO: Update expected filter once AEL-based scan filter is implemented
-        // Was: filtered to name.equals("Bob"), expected 2 results
         List<Person> expected = data.stream()
+                .filter(d -> d.name.equals("Bob"))
                 .sorted(comparing(Person::getId))
                 .collect(toList());
-        assertEquals(6, result.size());
-        assertEquals(expected, result.stream().sorted(comparing(Person::getId)).collect(toList()));
+
+        List<Person> resultAel = mapper.scan(Person.class, "$.name == \"Bob\"");
+        assertEquals(2, resultAel.size());
+        assertEquals(expected, resultAel.stream().sorted(comparing(Person::getId)).collect(toList()));
+
+        Expression bobFilter = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")));
+        List<Person> resultExp = mapper.scan(Person.class, bobFilter);
+        assertEquals(2, resultExp.size());
+        assertEquals(expected, resultExp.stream().sorted(comparing(Person::getId)).collect(toList()));
     }
 }

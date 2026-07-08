@@ -1,10 +1,12 @@
 package com.aerospike.mapper.tools;
 
 import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -27,13 +29,73 @@ final class TxnMappingView extends MappingSession {
     }
 
     @Override
+    public <T> void save(@NotNull T object, int ttlSeconds) {
+        getEngine().save(txnSession, object, ttlSeconds);
+    }
+
+    @Override
+    public <T> void save(@NotNull T object, @NotNull Duration ttl) {
+        getEngine().save(txnSession, object, ttl);
+    }
+
+    @Override
+    public <T> void save(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) {
+        getEngine().save(txnSession, object, ttlSeconds, binNames);
+    }
+
+    @Override
+    public <T> void save(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames) {
+        getEngine().save(txnSession, object, ttl, binNames);
+    }
+
+    @Override
     public <T> void insert(@NotNull T object, String... binNames) {
         getEngine().insert(txnSession, object, binNames);
     }
 
     @Override
+    public <T> void insert(@NotNull T object, int ttlSeconds) {
+        getEngine().insert(txnSession, object, ttlSeconds);
+    }
+
+    @Override
+    public <T> void insert(@NotNull T object, @NotNull Duration ttl) {
+        getEngine().insert(txnSession, object, ttl);
+    }
+
+    @Override
+    public <T> void insert(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) {
+        getEngine().insert(txnSession, object, ttlSeconds, binNames);
+    }
+
+    @Override
+    public <T> void insert(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames) {
+        getEngine().insert(txnSession, object, ttl, binNames);
+    }
+
+    @Override
     public <T> void update(@NotNull T object, String... binNames) {
         getEngine().update(txnSession, object, binNames);
+    }
+
+    @Override
+    public <T> void update(@NotNull T object, int ttlSeconds) {
+        getEngine().update(txnSession, object, ttlSeconds);
+    }
+
+    @Override
+    public <T> void update(@NotNull T object, @NotNull Duration ttl) {
+        getEngine().update(txnSession, object, ttl);
+    }
+
+    @Override
+    public <T> void update(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) {
+        getEngine().update(txnSession, object, ttlSeconds, binNames);
+    }
+
+    @Override
+    public <T> void update(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames) {
+        getEngine().update(txnSession, object, ttl, binNames);
     }
 
     @Override
@@ -72,6 +134,16 @@ final class TxnMappingView extends MappingSession {
     }
 
     @Override
+    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor) {
+        getEngine().query(txnSession, clazz, processor);
+    }
+
+    @Override
+    public <T> List<T> query(@NotNull Class<T> clazz) {
+        return getEngine().query(txnSession, clazz);
+    }
+
+    @Override
     public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, String aelExpression) {
         getEngine().query(txnSession, clazz, processor, aelExpression);
     }
@@ -79,6 +151,16 @@ final class TxnMappingView extends MappingSession {
     @Override
     public <T> List<T> query(@NotNull Class<T> clazz, String aelExpression) {
         return getEngine().query(txnSession, clazz, aelExpression);
+    }
+
+    @Override
+    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, @NotNull Expression filterExp) {
+        getEngine().query(txnSession, clazz, processor, filterExp);
+    }
+
+    @Override
+    public <T> List<T> query(@NotNull Class<T> clazz, @NotNull Expression filterExp) {
+        return getEngine().query(txnSession, clazz, filterExp);
     }
 
     @Override

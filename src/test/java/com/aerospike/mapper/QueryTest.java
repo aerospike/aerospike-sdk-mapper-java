@@ -9,15 +9,23 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.DataSet;
+import com.aerospike.client.sdk.ResultCode;
+import com.aerospike.client.sdk.exp.Exp;
+import com.aerospike.client.sdk.exp.Expression;
+import com.aerospike.client.sdk.query.IndexCollectionType;
+import com.aerospike.client.sdk.query.IndexType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.MappingSession;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class QueryTest extends AeroMapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testScan")
     public static class A {
@@ -91,13 +99,20 @@ public class QueryTest extends AeroMapperBaseTest {
         add(new A(20, "Lucinda", 63));
     }};
 
+    @BeforeAll
+    public void createIndexes() {
+        try {
+            session.createIndex(DataSet.of("test", "testScan"), "age_idx", "age",
+                    IndexType.INTEGER, IndexCollectionType.DEFAULT).waitTillComplete();
+        } catch (AerospikeException e) {
+            if (e.getResultCode() != ResultCode.INDEX_ALREADY_EXISTS) throw e;
+        }
+    }
+
     private MappingSession populate() {
         session.truncate(DataSet.of("test", "testScan"));
         MappingSession mapper = createMapper();
         mapper.save(data.toArray());
-
-        // TODO: Adapt for SDK - index creation
-        // Original: client.createIndex(null, "test", "testScan", "age_idx", "age", IndexType.NUMERIC).waitTillComplete();
         return mapper;
     }
 
@@ -106,7 +121,6 @@ public class QueryTest extends AeroMapperBaseTest {
         MappingSession mapper = populate();
         AtomicInteger counter = new AtomicInteger(0);
         mapper.query(A.class, (a) -> {
-            System.out.println(a);
             counter.incrementAndGet();
             return true;
         }, "$.age >= 30 and $.age <= 54");
@@ -116,7 +130,6 @@ public class QueryTest extends AeroMapperBaseTest {
     @Test
     public void queryTestWithAbort() {
         MappingSession mapper = populate();
-        // TODO: Adapt for SDK - QueryPolicy.maxConcurrentNodes no longer available
         AtomicInteger counter = new AtomicInteger(0);
         mapper.query(A.class, (a) -> {
             counter.incrementAndGet();
@@ -140,11 +153,8 @@ public class QueryTest extends AeroMapperBaseTest {
     }
 
     @Test
-    public void queryWithQueryPolicyTestReturnsList() {
+    public void queryWithExpFilterTestReturnsList() {
         MappingSession mapper = populate();
-        // TODO: Adapt for SDK - QueryPolicy/Exp filter replaced by AEL expression
-        // Original: QueryPolicy with filterExp = Exp.build(Exp.eq(Exp.stringBin("name"), Exp.val("Bob")))
-        // combined with Filter.range("age", 44, 78)
 
         List<A> result = mapper.query(A.class, "$.age >= 44 and $.age <= 78 and $.name == \"Bob\"");
 
@@ -154,5 +164,14 @@ public class QueryTest extends AeroMapperBaseTest {
                                .collect(toList());
         assertEquals(2, result.size());
         assertEquals(expected, result.stream().sorted(comparing(A::getId)).collect(toList()));
+
+        Expression expFilter = Exp.build(Exp.and(
+                Exp.ge(Exp.intBin("age"), Exp.val(44)),
+                Exp.le(Exp.intBin("age"), Exp.val(78)),
+                Exp.eq(Exp.stringBin("name"), Exp.val("Bob"))
+        ));
+        List<A> resultFromExp = mapper.query(A.class, expFilter);
+        assertEquals(2, resultFromExp.size());
+        assertEquals(expected, resultFromExp.stream().sorted(comparing(A::getId)).collect(toList()));
     }
 }

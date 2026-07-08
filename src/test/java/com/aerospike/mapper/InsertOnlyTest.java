@@ -2,6 +2,7 @@ package com.aerospike.mapper;
 
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Key;
+import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
@@ -42,11 +43,9 @@ public class InsertOnlyTest extends AeroMapperBaseTest {
         // Insert
         mapper.insert(dataClass);
 
-        // TODO: Adapt for SDK - raw record read via session
-        // Key key = new Key("test", "testSet", 1);
-        // Record record = client.get(null, key);
-        // assertEquals(5, record.bins.size());
-        // assertEquals(3, record.getInt("c"));
+        Record record = readRawRecord(new Key("test", "testSet", 1));
+        assertEquals(5, record.bins.size());
+        assertEquals(3, record.getInt("c"));
 
         // Try to insert again and get an exception
         dataClass.c = 9;

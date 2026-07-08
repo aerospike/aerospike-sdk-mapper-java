@@ -3,10 +3,12 @@ package com.aerospike.mapper.tools;
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Cluster;
 import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -46,12 +48,63 @@ public class MappingSession extends Session {
         engine.save(this, object, binNames);
     }
 
+    public <T> void save(@NotNull T object, int ttlSeconds) throws AerospikeException {
+        engine.save(this, object, ttlSeconds);
+    }
+
+    public <T> void save(@NotNull T object, @NotNull Duration ttl) throws AerospikeException {
+        engine.save(this, object, ttl);
+    }
+
+    public <T> void save(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) throws AerospikeException {
+        engine.save(this, object, ttlSeconds, binNames);
+    }
+
+    public <T> void save(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames)
+            throws AerospikeException {
+        engine.save(this, object, ttl, binNames);
+    }
+
     public <T> void insert(@NotNull T object, String... binNames) throws AerospikeException {
         engine.insert(this, object, binNames);
     }
 
+    public <T> void insert(@NotNull T object, int ttlSeconds) throws AerospikeException {
+        engine.insert(this, object, ttlSeconds);
+    }
+
+    public <T> void insert(@NotNull T object, @NotNull Duration ttl) throws AerospikeException {
+        engine.insert(this, object, ttl);
+    }
+
+    public <T> void insert(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) throws AerospikeException {
+        engine.insert(this, object, ttlSeconds, binNames);
+    }
+
+    public <T> void insert(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames)
+            throws AerospikeException {
+        engine.insert(this, object, ttl, binNames);
+    }
+
     public <T> void update(@NotNull T object, String... binNames) throws AerospikeException {
         engine.update(this, object, binNames);
+    }
+
+    public <T> void update(@NotNull T object, int ttlSeconds) throws AerospikeException {
+        engine.update(this, object, ttlSeconds);
+    }
+
+    public <T> void update(@NotNull T object, @NotNull Duration ttl) throws AerospikeException {
+        engine.update(this, object, ttl);
+    }
+
+    public <T> void update(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) throws AerospikeException {
+        engine.update(this, object, ttlSeconds, binNames);
+    }
+
+    public <T> void update(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames)
+            throws AerospikeException {
+        engine.update(this, object, ttl, binNames);
     }
 
     public <T> T read(@NotNull Class<T> clazz, @NotNull Object userKey) throws AerospikeException {
@@ -87,11 +140,35 @@ public class MappingSession extends Session {
     // -- Scan / Query --
 
     public <T> void scan(@NotNull Class<T> clazz, @NotNull Processor<T> processor) {
-        query(clazz, processor, null);
+        query(clazz, processor);
     }
 
     public <T> List<T> scan(@NotNull Class<T> clazz) {
-        return query(clazz, (String) null);
+        return query(clazz);
+    }
+
+    public <T> void scan(@NotNull Class<T> clazz, @NotNull Processor<T> processor, @NotNull String aelExpression) {
+        query(clazz, processor, aelExpression);
+    }
+
+    public <T> List<T> scan(@NotNull Class<T> clazz, @NotNull String aelExpression) {
+        return query(clazz, aelExpression);
+    }
+
+    public <T> void scan(@NotNull Class<T> clazz, @NotNull Processor<T> processor, @NotNull Expression filterExp) {
+        query(clazz, processor, filterExp);
+    }
+
+    public <T> List<T> scan(@NotNull Class<T> clazz, @NotNull Expression filterExp) {
+        return query(clazz, filterExp);
+    }
+
+    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor) {
+        engine.query(this, clazz, processor);
+    }
+
+    public <T> List<T> query(@NotNull Class<T> clazz) {
+        return engine.query(this, clazz);
     }
 
     public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, String aelExpression) {
@@ -100,6 +177,14 @@ public class MappingSession extends Session {
 
     public <T> List<T> query(@NotNull Class<T> clazz, String aelExpression) {
         return engine.query(this, clazz, aelExpression);
+    }
+
+    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, @NotNull Expression filterExp) {
+        engine.query(this, clazz, processor, filterExp);
+    }
+
+    public <T> List<T> query(@NotNull Class<T> clazz, @NotNull Expression filterExp) {
+        return engine.query(this, clazz, filterExp);
     }
 
     // -- Virtual lists --

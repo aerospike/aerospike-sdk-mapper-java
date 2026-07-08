@@ -5,11 +5,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Array;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +27,7 @@ import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.SessionExtension;
 import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.client.sdk.Value;
+import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
@@ -178,7 +181,7 @@ public class MappingEngine {
     enum WriteOp { REPLACE, INSERT, UPSERT }
 
     @SuppressWarnings("unchecked")
-    <T> void writeObject(Session session, T object, WriteOp op, String... binNames) {
+    <T> void writeObject(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
         Class<T> clazz = (Class<T>) object.getClass();
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
 
@@ -217,9 +220,13 @@ public class MappingEngine {
                     names.length > 1 ? Arrays.copyOfRange(names, 1, names.length) : new String[0]);
             binsBuilder.values(values);
 
-            Integer ttl = entry.getTtl();
-            if (ttl != null) {
-                binsBuilder.expireRecordAfterSeconds(ttl);
+            if (ttlOverrideSeconds.isPresent()) {
+                binsBuilder.expireRecordAfterSeconds(ttlOverrideSeconds.getAsInt());
+            } else {
+                Integer ttl = entry.getTtl();
+                if (ttl != null) {
+                    binsBuilder.expireRecordAfterSeconds(ttl);
+                }
             }
 
             Integer generationValue = entry.getGenerationValue(object);
@@ -233,16 +240,90 @@ public class MappingEngine {
         }
     }
 
+    <T> void writeObject(Session session, T object, WriteOp op, String... binNames) {
+        writeObject(session, object, op, OptionalInt.empty(), binNames);
+    }
+
     <T> void save(Session session, T object, String... binNames) {
         writeObject(session, object, WriteOp.REPLACE, binNames);
+    }
+
+    <T> void save(Session session, T object, int ttlSeconds) {
+        writeObject(session, object, WriteOp.REPLACE, OptionalInt.of(requirePositiveTtl(ttlSeconds)));
+    }
+
+    <T> void save(Session session, T object, Duration ttl) {
+        save(session, object, durationToTtlSeconds(ttl));
+    }
+
+    <T> void save(Session session, T object, int ttlSeconds, String[] binNames) {
+        writeObject(session, object, WriteOp.REPLACE, OptionalInt.of(requirePositiveTtl(ttlSeconds)), binNames);
+    }
+
+    <T> void save(Session session, T object, Duration ttl, String[] binNames) {
+        save(session, object, durationToTtlSeconds(ttl), binNames);
     }
 
     <T> void insert(Session session, T object, String... binNames) {
         writeObject(session, object, WriteOp.INSERT, binNames);
     }
 
+    <T> void insert(Session session, T object, int ttlSeconds) {
+        writeObject(session, object, WriteOp.INSERT, OptionalInt.of(requirePositiveTtl(ttlSeconds)));
+    }
+
+    <T> void insert(Session session, T object, Duration ttl) {
+        insert(session, object, durationToTtlSeconds(ttl));
+    }
+
+    <T> void insert(Session session, T object, int ttlSeconds, String[] binNames) {
+        writeObject(session, object, WriteOp.INSERT, OptionalInt.of(requirePositiveTtl(ttlSeconds)), binNames);
+    }
+
+    <T> void insert(Session session, T object, Duration ttl, String[] binNames) {
+        insert(session, object, durationToTtlSeconds(ttl), binNames);
+    }
+
     <T> void update(Session session, T object, String... binNames) {
         writeObject(session, object, WriteOp.UPSERT, binNames);
+    }
+
+    <T> void update(Session session, T object, int ttlSeconds) {
+        writeObject(session, object, WriteOp.UPSERT, OptionalInt.of(requirePositiveTtl(ttlSeconds)));
+    }
+
+    <T> void update(Session session, T object, Duration ttl) {
+        update(session, object, durationToTtlSeconds(ttl));
+    }
+
+    <T> void update(Session session, T object, int ttlSeconds, String[] binNames) {
+        writeObject(session, object, WriteOp.UPSERT, OptionalInt.of(requirePositiveTtl(ttlSeconds)), binNames);
+    }
+
+    <T> void update(Session session, T object, Duration ttl, String[] binNames) {
+        update(session, object, durationToTtlSeconds(ttl), binNames);
+    }
+
+    private static int requirePositiveTtl(int ttlSeconds) {
+        if (ttlSeconds <= 0) {
+            throw new IllegalArgumentException("TTL must be positive, got: " + ttlSeconds);
+        }
+        return ttlSeconds;
+    }
+
+    private static int durationToTtlSeconds(Duration ttl) {
+        if (ttl == null) {
+            throw new IllegalArgumentException("TTL Duration must not be null");
+        }
+        if (ttl.isNegative() || ttl.isZero()) {
+            throw new IllegalArgumentException("TTL must be positive, got: " + ttl);
+        }
+        long seconds = ttl.toSeconds();
+        if (seconds == 0) {
+            throw new IllegalArgumentException(
+                    "TTL must be at least 1 second (Aerospike TTL resolution is seconds), got: " + ttl);
+        }
+        return Math.toIntExact(seconds);
     }
 
     <T> T readFromDigest(Session session, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
@@ -351,15 +432,57 @@ public class MappingEngine {
         }
     }
 
+    <T> void query(Session session, Class<T> clazz, Processor<T> processor) {
+        doQuery(session, clazz, processor, null, null);
+    }
+
+    <T> List<T> query(Session session, Class<T> clazz) {
+        List<T> result = new ArrayList<>();
+        doQuery(session, clazz, record -> {
+            result.add(record);
+            return true;
+        }, null, null);
+        return result;
+    }
+
     <T> void query(Session session, Class<T> clazz, Processor<T> processor, String aelExpression) {
+        doQuery(session, clazz, processor, aelExpression, null);
+    }
+
+    <T> List<T> query(Session session, Class<T> clazz, String aelExpression) {
+        List<T> result = new ArrayList<>();
+        doQuery(session, clazz, record -> {
+            result.add(record);
+            return true;
+        }, aelExpression, null);
+        return result;
+    }
+
+    <T> void query(Session session, Class<T> clazz, Processor<T> processor, Expression filterExp) {
+        doQuery(session, clazz, processor, null, filterExp);
+    }
+
+    <T> List<T> query(Session session, Class<T> clazz, Expression filterExp) {
+        List<T> result = new ArrayList<>();
+        doQuery(session, clazz, record -> {
+            result.add(record);
+            return true;
+        }, null, filterExp);
+        return result;
+    }
+
+    private <T> void doQuery(Session session, Class<T> clazz, Processor<T> processor,
+                             String aelFilter, Expression expFilter) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         String namespace = entry.getNamespace();
         String setName = entry.getSetName();
 
         var dataSet = com.aerospike.client.sdk.DataSet.of(namespace, setName);
         var queryBuilder = session.query(dataSet);
-        if (aelExpression != null && !aelExpression.isBlank()) {
-            queryBuilder.where(aelExpression);
+        if (aelFilter != null && !aelFilter.isBlank()) {
+            queryBuilder.where(aelFilter);
+        } else if (expFilter != null) {
+            queryBuilder.where(expFilter);
         }
 
         pushSession(session);
@@ -378,15 +501,6 @@ public class MappingEngine {
         } finally {
             popSession();
         }
-    }
-
-    <T> List<T> query(Session session, Class<T> clazz, String aelExpression) {
-        List<T> result = new ArrayList<>();
-        query(session, clazz, record -> {
-            result.add(record);
-            return true;
-        }, aelExpression);
-        return result;
     }
 
     // -- Internal IBaseAeroMapper adapter --
@@ -487,10 +601,10 @@ public class MappingEngine {
         public boolean delete(Object object) { return engine.deleteByObject(requireSession(), object); }
 
         @Override
-        public <T> void scan(Class<T> clazz, Processor<T> processor) { engine.query(requireSession(), clazz, processor, null); }
+        public <T> void scan(Class<T> clazz, Processor<T> processor) { engine.query(requireSession(), clazz, processor); }
 
         @Override
-        public <T> List<T> scan(Class<T> clazz) { return engine.query(requireSession(), clazz, (String) null); }
+        public <T> List<T> scan(Class<T> clazz) { return engine.query(requireSession(), clazz); }
 
         @Override
         public <T> void query(Class<T> clazz, Processor<T> processor, String aelExpression) {
