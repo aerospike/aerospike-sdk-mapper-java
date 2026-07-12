@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class KeysViaMethodTest extends AeroMapperBaseTest {
+public class KeysViaMethodTest extends MapperBaseTest {
 
     private static final long epochTime = new GregorianCalendar(2020, Calendar.JANUARY, 1, 0, 0, 0).getTimeInMillis();
 
@@ -38,8 +38,6 @@ public class KeysViaMethodTest extends AeroMapperBaseTest {
 
         @AerospikeKey(setter = true)
         public void setKey(String key, Key recordKey) {
-            System.out.println("Parsing key from " + key);
-            System.out.println(recordKey);
             int index = key.indexOf(":");
             this.name = key.substring(0, index);
             this.id = Integer.valueOf(key.substring(index + 1));
@@ -67,7 +65,6 @@ public class KeysViaMethodTest extends AeroMapperBaseTest {
         Container container2 = mapper.read(Container.class, 1);
         assertEquals(7, container2.basicList.get(0).id);
         assertEquals("tim", container2.basicList.get(0).name);
-        System.out.println("Container 2 loaded");
     }
 
     // Since this record is only ever embedded, we do not need to specify a namespace or set (it would
@@ -147,6 +144,5 @@ public class KeysViaMethodTest extends AeroMapperBaseTest {
             assertEquals(account.txnList.get(i).date, result.txnList.get(i).date);
             assertEquals(account.txnList.get(i).description, result.txnList.get(i).description);
         }
-        System.out.println("done");
     }
 }

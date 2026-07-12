@@ -16,7 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class EmbeddedClassTest extends AeroMapperBaseTest {
+public class EmbeddedClassTest extends MapperBaseTest {
 
     @Test
     void testEmbed() {

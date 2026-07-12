@@ -2,8 +2,8 @@ package com.aerospike.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import org.junit.jupiter.api.Test;
@@ -18,25 +18,25 @@ import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
 
 
-public class DateCustomConverterTest extends AeroMapperBaseTest {
+public class DateCustomConverterTest extends MapperBaseTest {
 
     public static class DateConverter {
-        private static final ThreadLocal<SimpleDateFormat> dateFormatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("dd-MM-yyyy HH:mm:ss.SSS zzzZ"));
+        private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
         @ToAerospike
         public String toAerospike(Date date) {
             if (date == null) {
                 return null;
             }
-            return dateFormatter.get().format(date);
+            return DATE_FORMATTER.format(date.toInstant());
         }
 
         @FromAerospike
-        public Date fromAerospike(String dateStr) throws ParseException {
+        public Date fromAerospike(String dateStr) {
             if (dateStr == null) {
                 return null;
             }
-            return dateFormatter.get().parse(dateStr);
+            return Date.from(Instant.from(DATE_FORMATTER.parse(dateStr)));
         }
     }
 
@@ -48,7 +48,7 @@ public class DateCustomConverterTest extends AeroMapperBaseTest {
     }
 
     @Test
-    public void testSave() throws ParseException {
+    public void testSave() {
         MappingSession convertingMapper = createMapper(MappingEngine.builder().addConverter(new DateConverter()));
 
         Date date = new Date();
@@ -63,8 +63,7 @@ public class DateCustomConverterTest extends AeroMapperBaseTest {
 
         Record record = readRawRecord(new Key("test", "dateFormat", 1));
         String dateStr = record.getString("date");
-        Date date2 = DateConverter.dateFormatter.get().parse(dateStr);
-        System.out.println("Expected: " + date + ", received " + date2);
+        Date date2 = Date.from(Instant.from(DateConverter.DATE_FORMATTER.parse(dateStr)));
         assertEquals(date, date2);
     }
 }

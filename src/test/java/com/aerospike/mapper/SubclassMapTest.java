@@ -13,7 +13,7 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class SubclassMapTest extends AeroMapperBaseTest {
+public class SubclassMapTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "account")
     public static class Account {
         @AerospikeKey

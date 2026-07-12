@@ -12,7 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class VirtualListTest extends AeroMapperBaseTest {
+public class VirtualListTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "C")
     public static class C {

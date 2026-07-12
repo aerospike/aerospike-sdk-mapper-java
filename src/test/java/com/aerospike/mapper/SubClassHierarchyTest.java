@@ -19,9 +19,10 @@ import com.aerospike.mapper.annotations.AerospikeReference;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
-import com.aerospike.mapper.tools.ClassCacheEntry;
 
-public class SubClassHierarchyTest extends AeroMapperBaseTest {
+import static org.junit.jupiter.api.Assertions.*;
+
+public class SubClassHierarchyTest extends MapperBaseTest {
     @AerospikeRecord
     public static class BaseClass {
         private Date lastReadTime;
@@ -112,16 +113,6 @@ public class SubClassHierarchyTest extends AeroMapperBaseTest {
         private List<String> subAccounts;
     }
 
-    private void dumpClassCacheEntry(ClassCacheEntry<?> entry) {
-        System.out.println(entry.getUnderlyingClass().getName());
-        System.out.println("\tNamespace = " + entry.getNamespace());
-        System.out.println("\tSet = " + entry.getSetName());
-        System.out.println("\tShortened Name = " + entry.getShortenedClassName());
-        System.out.println("\tIs Child class = " + entry.isChildClass());
-        System.out.println("\tTTL = " + entry.getTtl());
-        System.out.println("\tDurable Deletes = " + entry.getDurableDelete());
-    }
-
     @AerospikeRecord(namespace = "test", set = "container")
     private static class Container {
         @AerospikeKey
@@ -140,21 +131,6 @@ public class SubClassHierarchyTest extends AeroMapperBaseTest {
                 .preLoadClasses(BaseClass.class, Customer.class, Account.class,
                         Savings.class, Checking.class, Portfolio.class);
         MappingSession mapper = createMapper(engineBuilder);
-        MappingEngine engine = mapper.getEngine();
-
-        ClassCacheEntry<BaseClass> baseClass = engine.loadClass(BaseClass.class);
-        ClassCacheEntry<Customer> customerClass = engine.loadClass(Customer.class);
-        ClassCacheEntry<Account> accountClass = engine.loadClass(Account.class);
-        ClassCacheEntry<Savings> savingsClass = engine.loadClass(Savings.class);
-        ClassCacheEntry<Checking> checkingClass = engine.loadClass(Checking.class);
-        ClassCacheEntry<Portfolio> portfolioClass = engine.loadClass(Portfolio.class);
-
-        dumpClassCacheEntry(baseClass);
-        dumpClassCacheEntry(customerClass);
-        dumpClassCacheEntry(accountClass);
-        dumpClassCacheEntry(savingsClass);
-        dumpClassCacheEntry(checkingClass);
-        dumpClassCacheEntry(portfolioClass);
 
         Customer customer = new Customer("cust1", "Tim");
 
@@ -222,7 +198,27 @@ public class SubClassHierarchyTest extends AeroMapperBaseTest {
         mapper.save(customer);
 
         Customer customer2 = mapper.read(Customer.class, customer.getCustomerId());
-        // TODO: validate the 2 object graphs are equivalent
-        System.out.println(customer2);
+
+        assertNotNull(customer2);
+        assertEquals("cust1", customer2.getCustomerId());
+        assertEquals("Tim", customer2.getName());
+
+        assertNotNull(customer2.getAccounts());
+        assertEquals(3, customer2.getAccounts().size());
+
+        assertEquals("SVNG1", customer2.savingsAcc.id);
+        assertEquals(200, customer2.savingsAcc.balance);
+        assertEquals("CHK1", customer2.checkAcc.id);
+        assertEquals(600, customer2.checkAcc.balance);
+        assertEquals("PF1", customer2.pfolioAcc.id);
+        assertEquals(1000, customer2.pfolioAcc.balance);
+
+        assertEquals("CHK1", customer2.primaryAcc.id);
+        assertEquals("PF1", customer2.secondaryAcc.id);
+
+        assertEquals(3, customer2.accountMap.size());
+        assertEquals("PF1", customer2.accountMap.get("A").id);
+        assertEquals("SVNG1", customer2.accountMap.get("B").id);
+        assertEquals("CHK1", customer2.accountMap.get("C").id);
     }
 }

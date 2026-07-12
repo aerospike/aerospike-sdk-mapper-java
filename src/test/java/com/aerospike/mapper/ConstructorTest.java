@@ -16,7 +16,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class ConstructorTest extends AeroMapperBaseTest {
+public class ConstructorTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "testSet")
     public static class NoArgConstructorClass {
@@ -76,7 +76,6 @@ public class ConstructorTest extends AeroMapperBaseTest {
         public ConstructedClass2(@ParamFrom("id") int id, @ParamFrom("a") int a) {
             this.id = id;
             this.a = a;
-            System.out.println("Using 2 arg");
         }
 
         @AerospikeConstructor
@@ -84,7 +83,6 @@ public class ConstructorTest extends AeroMapperBaseTest {
             this.id = id;
             this.a = a;
             this.b = b;
-            System.out.println("Using 3 arg");
         }
     }
 
@@ -96,7 +94,6 @@ public class ConstructorTest extends AeroMapperBaseTest {
 
         MappingSession mapper = createMapper();
         mapper.save(data);
-        System.out.println("reading back");
         ConstructedClass2 data2 = mapper.read(ConstructedClass2.class, 1);
         assertEquals(data.id, data2.id);
         assertEquals(data.a, data2.a);

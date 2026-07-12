@@ -1,19 +1,21 @@
 package com.aerospike.mapper.examples;
 
-import com.aerospike.mapper.AeroMapperBaseTest;
+import com.aerospike.mapper.MapperBaseTest;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
-import com.aerospike.mapper.tools.virtuallist.ReturnType;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class VirtualListExample extends AeroMapperBaseTest {
+import static org.junit.jupiter.api.Assertions.*;
+
+public class VirtualListExample extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "item")
     public static class Item {
@@ -46,6 +48,7 @@ public class VirtualListExample extends AeroMapperBaseTest {
         }
     }
 
+    @Test
     public void testListOfReferences() {
         Container container = new Container();
         container.id = 1;
@@ -62,23 +65,14 @@ public class VirtualListExample extends AeroMapperBaseTest {
         VirtualList<Item> list = mapper.asBackedList(container, "items", Item.class);
         // perform a single operation. NOTE: This does NOT change the backed item, just the database
         list.append(new Item(500, new Date(), "Item5"));
-		
-		/*
-		List<Item> results = (List<Item>) list.beginMultiOperation()
-				.append(new Item(600, new Date(), "Item6"))
-				.removeByKey(200)
-				.getByKeyRange(100, 450)
-			.end();
-		
-		System.out.println(results.size());
-		*/
-        long count = (long) list.beginMultiOperation()
+
+        List<Item> results = (List<Item>) list.beginMultiOperation()
                 .append(new Item(600, new Date(), "Item6"))
                 .removeByKey(200)
-                .removeByKeyRange(20, 350).asResultOfType(ReturnType.COUNT)
+                .removeByKeyRange(20, 350)
                 .getByKeyRange(100, 450)
                 .end();
 
-        System.out.println(count);
+        assertNotNull(results);
     }
 }

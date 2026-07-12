@@ -32,6 +32,8 @@ public abstract class ValueType {
 
     public abstract void set(Object obj, Object value) throws ReflectiveOperationException;
 
+    public abstract void set(Object obj, Object value, HydrationContext ctx) throws ReflectiveOperationException;
+
     public abstract Class<?> getType();
 
     public abstract Annotation[] getAnnotations();
@@ -86,6 +88,11 @@ public abstract class ValueType {
 
         @Override
         public void set(final Object obj, final Object value) throws ReflectiveOperationException {
+            set(obj, value, (HydrationContext) null);
+        }
+
+        @Override
+        public void set(final Object obj, final Object value, HydrationContext ctx) throws ReflectiveOperationException {
             if (value instanceof DeferredObject) {
                 DeferredSetter setter = object -> {
                     try {
@@ -95,7 +102,7 @@ public abstract class ValueType {
                     }
                 };
                 DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                DeferredObjectLoader.add(objectSetter);
+                ctx.addDeferred(objectSetter);
             } else {
                 this.field.set(obj, value);
             }
@@ -135,12 +142,21 @@ public abstract class ValueType {
 
         @Override
         public void set(final Object obj, final Object value) throws ReflectiveOperationException {
+            set(obj, value, new HydrationContext(null));
+        }
+
+        @Override
+        public void set(final Object obj, final Object value, HydrationContext ctx) throws ReflectiveOperationException {
             if (this.property.getSetter() == null) {
                 throw new AerospikeException("Lazy loading cannot be used on objects with a property key type and no annotated key setter method");
             } else {
                 switch (this.property.getSetterParamType()) {
                     case KEY: {
-                        final Key key = ThreadLocalKeySaver.get();
+                        final Key key = ctx.currentKey();
+                        if (key == null) {
+                            throw new AerospikeException(String.format(
+                                    "No current key in HydrationContext for KEY-type setter %s on %s", property, obj.getClass().getSimpleName()));
+                        }
                         if (value instanceof DeferredObject) {
                             DeferredSetter setter = resolved -> {
                                 try {
@@ -150,7 +166,7 @@ public abstract class ValueType {
                                 }
                             };
                             DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                            DeferredObjectLoader.add(objectSetter);
+                            ctx.addDeferred(objectSetter);
                         } else {
                             this.property.getSetter().invoke(obj, value, key);
                         }
@@ -158,7 +174,11 @@ public abstract class ValueType {
                     }
 
                     case VALUE: {
-                        final Key key = ThreadLocalKeySaver.get();
+                        final Key key = ctx.currentKey();
+                        if (key == null) {
+                            throw new AerospikeException(String.format(
+                                    "No current key in HydrationContext for VALUE-type setter %s on %s", property, obj.getClass().getSimpleName()));
+                        }
                         if (value instanceof DeferredObject) {
                             DeferredSetter setter = resolved -> {
                                 try {
@@ -168,7 +188,7 @@ public abstract class ValueType {
                                 }
                             };
                             DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                            DeferredObjectLoader.add(objectSetter);
+                            ctx.addDeferred(objectSetter);
                         } else {
                             this.property.getSetter().invoke(obj, value, key.userKey);
                         }
@@ -185,7 +205,7 @@ public abstract class ValueType {
                                 }
                             };
                             DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                            DeferredObjectLoader.add(objectSetter);
+                            ctx.addDeferred(objectSetter);
                         } else {
                             this.property.getSetter().invoke(obj, value);
                         }

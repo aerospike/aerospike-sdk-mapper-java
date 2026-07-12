@@ -4,7 +4,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.aerospike.mapper.tools.DeferredObjectLoader;
+import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.utils.TypeUtils;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObject;
@@ -44,6 +44,11 @@ public class ArrayMapper extends TypeMapper {
 
     @Override
     public Object fromAerospikeFormat(Object value) {
+        return fromAerospikeFormat(value, new HydrationContext(null));
+    }
+
+    @Override
+    public Object fromAerospikeFormat(Object value, HydrationContext ctx) {
         if (value == null) {
             return null;
         }
@@ -54,15 +59,14 @@ public class ArrayMapper extends TypeMapper {
 
         Object result = Array.newInstance(instanceClass, list.size());
         for (int i = 0; i < list.size(); i++) {
-
             Object obj = list.get(i);
-            Object item = this.instanceClassMapper.fromAerospikeFormat(obj);
+            Object item = this.instanceClassMapper.fromAerospikeFormat(obj, ctx);
             if (!allowBatch || (!(item instanceof DeferredObject))) {
                 Array.set(result, i, item);
             } else {
                 final int thisIndex = i;
                 DeferredSetter setter = object -> Array.set(result, thisIndex, object);
-                DeferredObjectLoader.add(new DeferredObjectSetter(setter, (DeferredObject) item));
+                ctx.addDeferred(new DeferredObjectSetter(setter, (DeferredObject) item));
             }
         }
         return result;

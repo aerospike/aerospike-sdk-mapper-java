@@ -9,14 +9,18 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.client.sdk.util.Crypto;
 import com.aerospike.mapper.annotations.AerospikeReference.ReferenceType;
-import com.aerospike.mapper.tools.*;
+import com.aerospike.mapper.tools.ClassCache;
+import com.aerospike.mapper.tools.ClassCacheEntry;
+import com.aerospike.mapper.tools.HydrationContext;
+import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObject;
 
 public class ObjectReferenceMapper extends ObjectMapper {
 
-    // Package visibility
     private final ClassCacheEntry<?> referencedClass;
     private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private final boolean lazy;
     private final boolean allowBatch;
     private final ReferenceType type;
@@ -25,6 +29,7 @@ public class ObjectReferenceMapper extends ObjectMapper {
                                  ReferenceType type, IBaseAeroMapper mapper) {
         this.referencedClass = entry;
         this.mapper = mapper;
+        this.engine = MappingEngine.fromMapper(mapper);
         this.lazy = lazy;
         this.type = type;
         this.allowBatch = allowBatch;
@@ -74,13 +79,65 @@ public class ObjectReferenceMapper extends ObjectMapper {
 
     @Override
     public Object fromAerospikeFormat(Object value) {
-        // The object should be the primary key of the referencing object
         if (value == null) {
             return null;
         }
-        ClassCacheEntry<?> classToUse = referencedClass;
+        ResolvedReference reference = resolveReference(value);
 
-        Object key;
+        if (this.lazy) {
+            Map<String, Object> map = new HashMap<>();
+            Object instance = reference.classToUse.constructAndHydrate(map);
+            reference.classToUse.setKey(instance, reference.key);
+            return instance;
+        } else if (allowBatch) {
+            return new DeferredObject(reference.key, reference.classToUse.getUnderlyingClass(),
+                    ReferenceType.DIGEST.equals(type));
+        } else if (ReferenceType.DIGEST.equals(type)) {
+            return mapper.asMapper().readFromDigest(reference.classToUse.getUnderlyingClass(),
+                    (byte[]) reference.key, false);
+        } else {
+            return mapper.asMapper().read(reference.classToUse.getUnderlyingClass(), reference.key, false);
+        }
+    }
+
+    @Override
+    public Object fromAerospikeFormat(Object value, HydrationContext ctx) {
+        if (value == null) {
+            return null;
+        }
+        if (ctx == null) {
+            throw new IllegalStateException(
+                    "ObjectReferenceMapper requires a HydrationContext; it must not be called outside a hydration scope");
+        }
+        ResolvedReference reference = resolveReference(value);
+
+        if (this.lazy) {
+            Map<String, Object> map = new HashMap<>();
+            Object instance = reference.classToUse.constructAndHydrate(map);
+            reference.classToUse.setKey(instance, reference.key);
+            return instance;
+        } else if (allowBatch) {
+            return new DeferredObject(reference.key, reference.classToUse.getUnderlyingClass(),
+                    ReferenceType.DIGEST.equals(type));
+        } else {
+            MappingEngine resolvedEngine = this.engine;
+            if (resolvedEngine == null) {
+                throw new IllegalStateException(
+                        "ObjectReferenceMapper has no MappingEngine; cannot perform immediate reads");
+            }
+            if (ReferenceType.DIGEST.equals(type)) {
+                return resolvedEngine.readFromDigestWithContext(
+                        ctx, reference.classToUse.getUnderlyingClass(), (byte[]) reference.key, false);
+            } else {
+                return resolvedEngine.readWithContext(
+                        ctx, reference.classToUse.getUnderlyingClass(), reference.key, false);
+            }
+        }
+    }
+
+    private ResolvedReference resolveReference(Object value) {
+        ClassCacheEntry<?> classToUse = referencedClass;
+        Object key = value;
         if (value instanceof List) {
             List<?> list = (List<?>) value;
             key = list.get(0);
@@ -89,21 +146,17 @@ public class ObjectReferenceMapper extends ObjectMapper {
                 typeName = typeName.substring(ClassCacheEntry.TYPE_PREFIX.length());
             }
             classToUse = ClassCache.getInstance().getCacheEntryFromStoredName(typeName);
-        } else {
-            key = value;
         }
+        return new ResolvedReference(classToUse, key);
+    }
 
-        if (this.lazy) {
-            Map<String, Object> map = new HashMap<>();
-            Object instance = classToUse.constructAndHydrate(map);
-            classToUse.setKey(instance, key);
-            return instance;
-        } else if (allowBatch) {
-            return new DeferredObject(key, classToUse.getUnderlyingClass(), ReferenceType.DIGEST.equals(type));
-        } else if (ReferenceType.DIGEST.equals(type)) {
-            return mapper.asMapper().readFromDigest(classToUse.getUnderlyingClass(), (byte[]) key, false);
-        } else {
-            return mapper.asMapper().read(classToUse.getUnderlyingClass(), key, false);
+    private static final class ResolvedReference {
+        private final ClassCacheEntry<?> classToUse;
+        private final Object key;
+
+        private ResolvedReference(ClassCacheEntry<?> classToUse, Object key) {
+            this.classToUse = classToUse;
+            this.key = key;
         }
     }
 }

@@ -13,11 +13,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import jakarta.validation.constraints.NotNull;
 
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.ErrorStrategy;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordMappingFactory;
@@ -59,12 +64,11 @@ import org.yaml.snakeyaml.Yaml;
  * session.save(myObject);
  * }</pre>
  */
-public class MappingEngine {
+public class MappingEngine implements AutoCloseable {
 
     private final MappingConverter mappingConverter;
     private final IBaseAeroMapper internalMapper;
-    private final ThreadLocal<Session> currentSession = new ThreadLocal<>();
-    private final ThreadLocal<Integer> sessionNestingDepth = new ThreadLocal<>();
+    private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private MappingEngine() {
         this.internalMapper = new InternalMapperAdapter(this);
@@ -150,30 +154,46 @@ public class MappingEngine {
     }
 
     /**
-     * Sets the current session for use by internal type mappers during hydration.
-     * Re-entrant: nested calls increment a depth counter without changing the
-     * session. This means the outermost caller's session is used throughout
-     * the entire operation, including any recursive reads triggered by
-     * reference resolution (e.g. {@code ObjectReferenceMapper}).
+     * Extracts the {@code MappingEngine} from an {@link IBaseAeroMapper} if
+     * the mapper is backed by one. Returns {@code null} otherwise.
      */
-    private void pushSession(Session session) {
-        Integer depth = sessionNestingDepth.get();
-        if (depth == null || depth == 0) {
-            currentSession.set(session);
-            sessionNestingDepth.set(1);
-        } else {
-            sessionNestingDepth.set(depth + 1);
+    public static MappingEngine fromMapper(IBaseAeroMapper mapper) {
+        if (mapper instanceof InternalMapper im) {
+            return im.getEngine();
         }
+        return null;
     }
 
-    private void popSession() {
-        Integer depth = sessionNestingDepth.get();
-        if (depth != null && depth > 1) {
-            sessionNestingDepth.set(depth - 1);
-        } else {
-            currentSession.remove();
-            sessionNestingDepth.remove();
-        }
+    /**
+     * Continue a nested read within an existing hydration scope.
+     * Intended for internal use by built-in mappers that must preserve the
+     * parent {@link HydrationContext}'s cache, deferred queue, and key stack.
+     */
+    public <T> T readWithContext(HydrationContext ctx, Class<T> clazz, Object userKey, boolean resolveDependencies) {
+        return read(ctx, clazz, userKey, resolveDependencies);
+    }
+
+    /**
+     * Continue a nested digest read within an existing hydration scope.
+     * Intended for internal use by built-in mappers that must preserve the
+     * parent {@link HydrationContext}'s cache, deferred queue, and key stack.
+     */
+    public <T> T readFromDigestWithContext(HydrationContext ctx, Class<T> clazz, byte[] digest,
+                                           boolean resolveDependencies) {
+        return readFromDigest(ctx, clazz, digest, resolveDependencies);
+    }
+
+    /**
+     * Returns the executor used by {@link MappingSession} async methods.
+     * Backed by virtual threads — ideal for blocking database I/O.
+     */
+    public Executor asyncExecutor() {
+        return asyncExecutor;
+    }
+
+    @Override
+    public void close() {
+        asyncExecutor.close();
     }
 
     // -- Internal CRUD methods (called by MappingSession) --
@@ -208,40 +228,181 @@ public class MappingEngine {
             i++;
         }
 
-        pushSession(session);
-        try {
-            var builder = switch (op) {
-                case REPLACE -> session.replace(key);
-                case INSERT -> session.insert(key);
-                case UPSERT -> session.upsert(key);
-            };
+        var builder = switch (op) {
+            case REPLACE -> session.replace(key);
+            case INSERT -> session.insert(key);
+            case UPSERT -> session.upsert(key);
+        };
 
-            var binsBuilder = builder.bins(names[0],
-                    names.length > 1 ? Arrays.copyOfRange(names, 1, names.length) : new String[0]);
-            binsBuilder.values(values);
+        var binsBuilder = builder.bins(names[0],
+                names.length > 1 ? Arrays.copyOfRange(names, 1, names.length) : new String[0]);
+        binsBuilder.values(values);
 
-            if (ttlOverrideSeconds.isPresent()) {
-                binsBuilder.expireRecordAfterSeconds(ttlOverrideSeconds.getAsInt());
-            } else {
-                Integer ttl = entry.getTtl();
-                if (ttl != null) {
-                    binsBuilder.expireRecordAfterSeconds(ttl);
-                }
+        if (ttlOverrideSeconds.isPresent()) {
+            binsBuilder.expireRecordAfterSeconds(ttlOverrideSeconds.getAsInt());
+        } else {
+            Integer ttl = entry.getTtl();
+            if (ttl != null) {
+                binsBuilder.expireRecordAfterSeconds(ttl);
             }
-
-            Integer generationValue = entry.getGenerationValue(object);
-            if (generationValue != null && generationValue > 0) {
-                binsBuilder.ensureGenerationIs(generationValue);
-            }
-
-            binsBuilder.execute().close();
-        } finally {
-            popSession();
         }
+
+        Integer generationValue = entry.getGenerationValue(object);
+        if (generationValue != null && generationValue > 0) {
+            binsBuilder.ensureGenerationIs(generationValue);
+        }
+
+        binsBuilder.execute().close();
     }
 
     <T> void writeObject(Session session, T object, WriteOp op, String... binNames) {
         writeObject(session, object, op, OptionalInt.empty(), binNames);
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> CompletableFuture<Void> writeObjectAsync(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
+        Class<T> clazz = (Class<T>) object.getClass();
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+
+        String set = entry.getSetName();
+        if ("".equals(set)) {
+            set = null;
+        }
+        Key key = new Key(entry.getNamespace(), set, Value.get(entry.getKey(object)));
+
+        boolean allowNullBins = (op != WriteOp.REPLACE);
+        Map<String, Object> binMap = entry.getMap(object, allowNullBins, binNames);
+
+        if (binMap.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        int size = binMap.size();
+        String[] names = new String[size];
+        Object[] values = new Object[size];
+        int i = 0;
+        for (var e : binMap.entrySet()) {
+            names[i] = e.getKey();
+            values[i] = e.getValue();
+            i++;
+        }
+
+        var builder = switch (op) {
+            case REPLACE -> session.replace(key);
+            case INSERT -> session.insert(key);
+            case UPSERT -> session.upsert(key);
+        };
+
+        var binsBuilder = builder.bins(names[0],
+                names.length > 1 ? Arrays.copyOfRange(names, 1, names.length) : new String[0]);
+        binsBuilder.values(values);
+
+        if (ttlOverrideSeconds.isPresent()) {
+            binsBuilder.expireRecordAfterSeconds(ttlOverrideSeconds.getAsInt());
+        } else {
+            Integer ttl = entry.getTtl();
+            if (ttl != null) {
+                binsBuilder.expireRecordAfterSeconds(ttl);
+            }
+        }
+
+        Integer generationValue = entry.getGenerationValue(object);
+        if (generationValue != null && generationValue > 0) {
+            binsBuilder.ensureGenerationIs(generationValue);
+        }
+
+        return binsBuilder.executeAsync(ErrorStrategy.IN_STREAM)
+                .asCompletableFuture()
+                .thenApply(results -> {
+                    if (results != null && !results.isEmpty()) {
+                        results.get(0).orThrow();
+                    }
+                    return null;
+                });
+    }
+
+    <T> CompletableFuture<T> readSingleAsync(Session session, Class<T> clazz, Object userKey) {
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        String set = entry.getSetName();
+        Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
+
+        return session.query(List.of(key))
+                .executeAsync(ErrorStrategy.IN_STREAM)
+                .asCompletableFuture()
+                .thenApply(results -> {
+                    if (results == null || results.isEmpty()) {
+                        return null;
+                    }
+                    RecordResult rr = results.get(0);
+                    if (!rr.isOk() || rr.recordOrNull() == null) {
+                        return null;
+                    }
+                    HydrationContext ctx = new HydrationContext(session);
+                    ctx.pushKey(key);
+                    try {
+                        return mappingConverter.convertToObject(clazz, key, rr.recordOrNull(), entry, true, ctx);
+                    } finally {
+                        ctx.popKey();
+                    }
+                });
+    }
+
+    <T> CompletableFuture<T> readFromDigestAsync(Session session, Class<T> clazz, byte[] digest) {
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
+
+        return session.query(List.of(key))
+                .executeAsync(ErrorStrategy.IN_STREAM)
+                .asCompletableFuture()
+                .thenApply(results -> {
+                    if (results == null || results.isEmpty()) {
+                        return null;
+                    }
+                    RecordResult rr = results.get(0);
+                    if (!rr.isOk() || rr.recordOrNull() == null) {
+                        return null;
+                    }
+                    HydrationContext ctx = new HydrationContext(session);
+                    ctx.pushKey(key);
+                    try {
+                        return mappingConverter.convertToObject(clazz, key, rr.recordOrNull(), entry, true, ctx);
+                    } finally {
+                        ctx.popKey();
+                    }
+                });
+    }
+
+    <T> CompletableFuture<Boolean> deleteByKeyAsync(Session session, Class<T> clazz, Object userKey) {
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        Object asKey = entry.translateKeyToAerospikeKey(userKey);
+        Key key = new Key(entry.getNamespace(), entry.getSetName(), Value.get(asKey));
+
+        return session.delete(key)
+                .executeAsync(ErrorStrategy.IN_STREAM)
+                .asCompletableFuture()
+                .thenApply(results -> {
+                    if (results == null || results.isEmpty()) {
+                        return false;
+                    }
+                    RecordResult rr = results.get(0);
+                    return rr.isOk();
+                });
+    }
+
+    CompletableFuture<Boolean> deleteByObjectAsync(Session session, Object object) {
+        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(object.getClass(), internalMapper);
+        Key key = new Key(entry.getNamespace(), entry.getSetName(), Value.get(entry.getKey(object)));
+
+        return session.delete(key)
+                .executeAsync(ErrorStrategy.IN_STREAM)
+                .asCompletableFuture()
+                .thenApply(results -> {
+                    if (results == null || results.isEmpty()) {
+                        return false;
+                    }
+                    RecordResult rr = results.get(0);
+                    return rr.isOk();
+                });
     }
 
     <T> void save(Session session, T object, String... binNames) {
@@ -339,14 +500,21 @@ public class MappingEngine {
         return readSingle(session, clazz, key, entry, resolveDependencies);
     }
 
-    @SuppressWarnings("unchecked")
+    <T> T readFromDigest(HydrationContext ctx, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
+        return readSingle(ctx, clazz, key, entry, resolveDependencies);
+    }
+
+    <T> T read(HydrationContext ctx, Class<T> clazz, Object userKey, boolean resolveDependencies) {
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        String set = entry.getSetName();
+        Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
+        return readSingle(ctx, clazz, key, entry, resolveDependencies);
+    }
+
     private <T> T readSingle(Session session, Class<T> clazz, Key key, ClassCacheEntry<T> entry,
                              boolean resolveDependencies) {
-        Object objectForKey = LoadedObjectResolver.get(key);
-        if (objectForKey != null) {
-            return (T) objectForKey;
-        }
-
         Record record;
         try (RecordStream stream = session.query(List.of(key)).execute()) {
             RecordResult rr = stream.hasNext() ? stream.next() : null;
@@ -356,13 +524,39 @@ public class MappingEngine {
         if (record == null) {
             return null;
         }
-        pushSession(session);
+
+        HydrationContext ctx = new HydrationContext(session);
+        ctx.pushKey(key);
         try {
-            ThreadLocalKeySaver.save(key);
-            return mappingConverter.convertToObject(clazz, key, record, entry, resolveDependencies, session);
+            return mappingConverter.convertToObject(clazz, key, record, entry, resolveDependencies, ctx);
         } finally {
-            ThreadLocalKeySaver.clear();
-            popSession();
+            ctx.popKey();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T readSingle(HydrationContext ctx, Class<T> clazz, Key key, ClassCacheEntry<T> entry,
+                             boolean resolveDependencies) {
+        Object objectForKey = ctx.getCached(key);
+        if (objectForKey != null) {
+            return (T) objectForKey;
+        }
+
+        Record record;
+        try (RecordStream stream = ctx.session().query(List.of(key)).execute()) {
+            RecordResult rr = stream.hasNext() ? stream.next() : null;
+            record = (rr != null && rr.isOk()) ? rr.recordOrNull() : null;
+        }
+
+        if (record == null) {
+            return null;
+        }
+
+        ctx.pushKey(key);
+        try {
+            return mappingConverter.convertToObject(clazz, key, record, entry, resolveDependencies, ctx);
+        } finally {
+            ctx.popKey();
         }
     }
 
@@ -389,25 +583,21 @@ public class MappingEngine {
         }
 
         T[] results = (T[]) Array.newInstance(clazz, keys.length);
-        pushSession(session);
-        try {
-            for (int i = 0; i < keys.length; i++) {
-                Record record = recordMap.get(keys[i]);
-                if (record == null) {
-                    results[i] = null;
-                } else {
-                    try {
-                        ThreadLocalKeySaver.save(keys[i]);
-                        results[i] = mappingConverter.convertToObject(clazz, keys[i], record, entry, false, session);
-                    } finally {
-                        ThreadLocalKeySaver.clear();
-                    }
+        HydrationContext ctx = new HydrationContext(session);
+        for (int i = 0; i < keys.length; i++) {
+            Record record = recordMap.get(keys[i]);
+            if (record == null) {
+                results[i] = null;
+            } else {
+                ctx.pushKey(keys[i]);
+                try {
+                    results[i] = mappingConverter.convertToObject(clazz, keys[i], record, entry, false, ctx);
+                } finally {
+                    ctx.popKey();
                 }
             }
-            mappingConverter.resolveDependencies(session);
-        } finally {
-            popSession();
         }
+        mappingConverter.resolveDependencies(ctx);
         return results;
     }
 
@@ -471,6 +661,21 @@ public class MappingEngine {
         return result;
     }
 
+    RecordStream buildQueryStream(Session session, Class<?> clazz, String aelFilter, Expression expFilter) {
+        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        String namespace = entry.getNamespace();
+        String setName = entry.getSetName();
+
+        var dataSet = com.aerospike.client.sdk.DataSet.of(namespace, setName);
+        var queryBuilder = session.query(dataSet);
+        if (aelFilter != null && !aelFilter.isBlank()) {
+            queryBuilder.where(aelFilter);
+        } else if (expFilter != null) {
+            queryBuilder.where(expFilter);
+        }
+        return queryBuilder.execute();
+    }
+
     private <T> void doQuery(Session session, Class<T> clazz, Processor<T> processor,
                              String aelFilter, Expression expFilter) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
@@ -485,33 +690,40 @@ public class MappingEngine {
             queryBuilder.where(expFilter);
         }
 
-        pushSession(session);
+        HydrationContext ctx = new HydrationContext(session);
         try (RecordStream stream = queryBuilder.execute()) {
             while (stream.hasNext()) {
                 RecordResult rr = stream.next();
                 if (!rr.isOk() || rr.recordOrNull() == null) {
                     continue;
                 }
-                T object = mappingConverter.convertToObject(clazz, rr.key(), rr.recordOrNull(), entry,
-                        true, session);
+                ctx.pushKey(rr.key());
+                T object;
+                try {
+                    object = mappingConverter.convertToObject(clazz, rr.key(), rr.recordOrNull(), entry,
+                            true, ctx);
+                } finally {
+                    ctx.popKey();
+                }
                 if (!processor.process(object)) {
                     break;
                 }
             }
-        } finally {
-            popSession();
         }
     }
 
     // -- Internal IBaseAeroMapper adapter --
 
-    private static final class InternalMapperAdapter implements IBaseAeroMapper {
+    private static final class InternalMapperAdapter implements InternalMapper {
         private final MappingEngine engine;
-        private final SessionBoundMapper sessionBoundMapper;
 
         InternalMapperAdapter(MappingEngine engine) {
             this.engine = engine;
-            this.sessionBoundMapper = new SessionBoundMapper(engine);
+        }
+
+        @Override
+        public MappingEngine getEngine() {
+            return engine;
         }
 
         @Override
@@ -521,137 +733,16 @@ public class MappingEngine {
 
         @Override
         public IAeroMapper asMapper() {
-            return sessionBoundMapper;
+            throw new UnsupportedOperationException(
+                    "asMapper() is no longer supported. Use MappingSession for CRUD operations.");
         }
 
         @Override
         public Session getSession() {
-            Session session = engine.currentSession.get();
-            if (session == null) {
-                throw new UnsupportedOperationException(
-                        "getSession() is not available outside of a CRUD operation context. " +
-                        "Use MappingSession for operations that require a session.");
-            }
-            return session;
+            throw new UnsupportedOperationException(
+                    "getSession() is not available on InternalMapperAdapter. " +
+                    "Use MappingSession for operations that require a session.");
         }
-    }
-
-    /**
-     * Lightweight IAeroMapper that reads the active session from the engine's
-     * ThreadLocal. Used by type mappers (e.g. ObjectReferenceMapper) that call
-     * {@code mapper.asMapper().read(...)} during object hydration.
-     */
-    private static final class SessionBoundMapper implements IAeroMapper {
-        private final MappingEngine engine;
-
-        SessionBoundMapper(MappingEngine engine) {
-            this.engine = engine;
-        }
-
-        private Session requireSession() {
-            Session session = engine.currentSession.get();
-            if (session == null) {
-                throw new IllegalStateException(
-                        "No active session. This mapper can only be used during a CRUD operation on MappingSession.");
-            }
-            return session;
-        }
-
-        @Override
-        @SafeVarargs
-        public final <T> void save(T... objects) {
-            Session s = requireSession();
-            for (T obj : objects) { engine.save(s, obj); }
-        }
-
-        @Override
-        public <T> void save(T object, String... binNames) { engine.save(requireSession(), object, binNames); }
-
-        @Override
-        public <T> void insert(T object, String... binNames) { engine.insert(requireSession(), object, binNames); }
-
-        @Override
-        public <T> void update(T object, String... binNames) { engine.update(requireSession(), object, binNames); }
-
-        @Override
-        public <T> T read(Class<T> clazz, Object userKey) { return engine.read(requireSession(), clazz, userKey, true); }
-
-        @Override
-        public <T> T read(Class<T> clazz, Object userKey, boolean resolveDependencies) {
-            return engine.read(requireSession(), clazz, userKey, resolveDependencies);
-        }
-
-        @Override
-        public <T> T readFromDigest(Class<T> clazz, byte[] digest) {
-            return engine.readFromDigest(requireSession(), clazz, digest, true);
-        }
-
-        @Override
-        public <T> T readFromDigest(Class<T> clazz, byte[] digest, boolean resolveDependencies) {
-            return engine.readFromDigest(requireSession(), clazz, digest, resolveDependencies);
-        }
-
-        @Override
-        public <T> T[] read(Class<T> clazz, Object[] userKeys) { return engine.readBatch(requireSession(), clazz, userKeys); }
-
-        @Override
-        public <T> boolean delete(Class<T> clazz, Object userKey) { return engine.deleteByKey(requireSession(), clazz, userKey); }
-
-        @Override
-        public boolean delete(Object object) { return engine.deleteByObject(requireSession(), object); }
-
-        @Override
-        public <T> void scan(Class<T> clazz, Processor<T> processor) { engine.query(requireSession(), clazz, processor); }
-
-        @Override
-        public <T> List<T> scan(Class<T> clazz) { return engine.query(requireSession(), clazz); }
-
-        @Override
-        public <T> void query(Class<T> clazz, Processor<T> processor, String aelExpression) {
-            engine.query(requireSession(), clazz, processor, aelExpression);
-        }
-
-        @Override
-        public <T> List<T> query(Class<T> clazz, String aelExpression) {
-            return engine.query(requireSession(), clazz, aelExpression);
-        }
-
-        @Override
-        public <T> VirtualList<T> asBackedList(Object object, String binName, Class<T> elementClazz) {
-            return new VirtualList<>(this, object, binName, elementClazz);
-        }
-
-        @Override
-        public <T> VirtualList<T> asBackedList(Class<?> owningClazz, Object key, String binName, Class<T> elementClazz) {
-            return new VirtualList<>(this, owningClazz, key, binName, elementClazz);
-        }
-
-        @Override
-        public RecordMappingFactory asMappingFactory() { return engine.asRecordMappingFactory(); }
-
-        @Override
-        public <T> TypedDataSet<T> getTypedDataSet(Class<T> clazz) { return engine.typedDataSet(clazz); }
-
-        @Override
-        public String getNamespace(Class<?> clazz) { return engine.getNamespace(clazz); }
-
-        @Override
-        public String getSet(Class<?> clazz) { return engine.getSet(clazz); }
-
-        @Override
-        public Object getKey(Object obj) { return engine.getKey(obj); }
-
-        @Override
-        public Key getRecordKey(Object obj) { return engine.getRecordKey(obj); }
-
-        @Override
-        public MappingConverter getMappingConverter() { return engine.mappingConverter; }
-
-        @Override
-        public IAeroMapper asMapper() { return this; }
-
-        @Override
-        public Session getSession() { return requireSession(); }
     }
 
     // -- Builder --

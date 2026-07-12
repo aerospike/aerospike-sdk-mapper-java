@@ -13,7 +13,7 @@ import com.aerospike.mapper.tools.ClassCacheEntry;
 import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class GenerationNotStoredTest extends AeroMapperBaseTest {
+public class GenerationNotStoredTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = NAMESPACE, set = "generationNotStoredTest")
     public static class EntityWithGeneration {

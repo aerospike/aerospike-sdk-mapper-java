@@ -10,7 +10,7 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class PartialRecordsTest extends AeroMapperBaseTest {
+public class PartialRecordsTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "testSet")
     public static class DataClass {

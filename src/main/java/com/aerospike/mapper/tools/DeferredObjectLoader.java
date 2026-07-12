@@ -51,30 +51,4 @@ public class DeferredObjectLoader {
             return object;
         }
     }
-
-
-    private static final ThreadLocal<List<DeferredObjectSetter>> threadLocalLoader = ThreadLocal.withInitial(ArrayList::new);
-
-    public static void save(DeferredObjectSetter object) {
-        threadLocalLoader.get().add(object);
-    }
-
-    public static void clear() {
-        threadLocalLoader.get().clear();
-    }
-
-    public static List<DeferredObjectSetter> get() {
-        return threadLocalLoader.get();
-    }
-
-    public static void add(DeferredObjectSetter deferredSetter) {
-        threadLocalLoader.get().add(deferredSetter);
-    }
-
-    public static List<DeferredObjectSetter> getAndClear() {
-        List<DeferredObjectSetter> localArray = threadLocalLoader.get();
-        List<DeferredObjectSetter> setters = new ArrayList<>(localArray);
-        localArray.clear();
-        return setters;
-    }
 }

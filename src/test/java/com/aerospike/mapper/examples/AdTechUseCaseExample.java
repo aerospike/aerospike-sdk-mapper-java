@@ -1,18 +1,21 @@
 package com.aerospike.mapper.examples;
 
-import com.aerospike.mapper.AeroMapperBaseTest;
+import com.aerospike.mapper.MapperBaseTest;
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.ReturnType;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class AdTechUseCaseExample extends AeroMapperBaseTest {
+import static org.junit.jupiter.api.Assertions.*;
+
+public class AdTechUseCaseExample extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "user")
     public static class User {
         @AerospikeKey
@@ -97,6 +100,7 @@ public class AdTechUseCaseExample extends AeroMapperBaseTest {
         }
     }
 
+    @Test
     public void adTechUseCase() {
         MappingSession mapper = createMapper();
 
@@ -127,10 +131,10 @@ public class AdTechUseCaseExample extends AeroMapperBaseTest {
 
         // Now, get any segments in the last 7 days
         Date readCutoff = new Date(timeInMs - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS));
-//		List<Segment> segmentList = (List<Segment>) segments.beginMulti()
-//			.getByValueRange(readCutoff, null)
-//			.end();
         List<Segment> segmentList = segments.getByValueRange(new Date[]{readCutoff}, null, ReturnType.ELEMENTS);
-        System.out.println(segmentList);
+
+        assertNotNull(segmentList);
+        assertFalse(segmentList.isEmpty());
+        assertTrue(segmentList.stream().allMatch(s -> s.getLastSeen().after(readCutoff)));
     }
 }

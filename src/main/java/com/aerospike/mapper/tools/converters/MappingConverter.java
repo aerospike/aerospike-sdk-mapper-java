@@ -11,9 +11,8 @@ import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.ClassCacheEntry;
 import com.aerospike.mapper.tools.DeferredObjectLoader;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObjectSetter;
+import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.IBaseAeroMapper;
-import com.aerospike.mapper.tools.LoadedObjectResolver;
-import com.aerospike.mapper.tools.ThreadLocalKeySaver;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.utils.MapperUtils;
 import com.aerospike.mapper.tools.utils.TypeUtils;
@@ -76,7 +75,7 @@ public class MappingConverter {
      * an instance of the passed class.
      */
     public <T> T convertToObject(Class<T> clazz, Key key, Record record, ClassCacheEntry<T> entry) {
-        return this.convertToObject(clazz, key, record, entry, true, null);
+        return this.convertToObject(clazz, key, record, entry, true, (Session) null);
     }
 
     /**
@@ -87,9 +86,25 @@ public class MappingConverter {
         if (entry == null) {
             entry = ClassCache.getInstance().loadClass(clazz, mapper);
         }
-        T result = entry.constructAndHydrate(key, record);
+        HydrationContext ctx = new HydrationContext(session);
+        T result = entry.constructAndHydrate(key, record, ctx);
         if (resolveDependencies && session != null) {
-            resolveDependencies(session);
+            resolveDependencies(ctx);
+        }
+        return result;
+    }
+
+    /**
+     * Convert a record to an object using an explicit HydrationContext, optionally resolving dependencies.
+     */
+    public <T> T convertToObject(Class<T> clazz, Key key, Record record, ClassCacheEntry<T> entry,
+                                 boolean resolveDependencies, HydrationContext ctx) {
+        if (entry == null) {
+            entry = ClassCache.getInstance().loadClass(clazz, mapper);
+        }
+        T result = entry.constructAndHydrate(key, record, ctx);
+        if (resolveDependencies) {
+            resolveDependencies(ctx);
         }
         return result;
     }
@@ -99,20 +114,27 @@ public class MappingConverter {
      * an instance of the passed class.
      */
     public <T> T convertToObject(Class<T> clazz, List<Object> record) {
-        return this.convertToObject(clazz, record, true, null);
+        return this.convertToObject(clazz, record, true, new HydrationContext(null));
     }
 
     /**
      * Convert a list-encoded object, optionally resolving dependencies.
      */
     public <T> T convertToObject(Class<T> clazz, List<Object> record, boolean resolveDependencies, Session session) {
+        return convertToObject(clazz, record, resolveDependencies, new HydrationContext(session));
+    }
+
+    /**
+     * Convert a list-encoded object using explicit HydrationContext, optionally resolving dependencies.
+     */
+    public <T> T convertToObject(Class<T> clazz, List<Object> record, boolean resolveDependencies, HydrationContext ctx) {
         try {
             ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, mapper);
             T result;
             result = clazz.getConstructor().newInstance();
-            entry.hydrateFromList(record, result);
-            if (resolveDependencies && session != null) {
-                resolveDependencies(session);
+            entry.hydrateFromList(record, result, false, ctx);
+            if (resolveDependencies) {
+                resolveDependencies(ctx);
             }
             return result;
         } catch (ReflectiveOperationException e) {
@@ -126,7 +148,7 @@ public class MappingConverter {
      */
     public <T> T convertToObject(Class<T> clazz, Map<String, Object> record) {
         ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, mapper);
-        return entry.constructAndHydrate(record);
+        return entry.constructAndHydrate(record, new HydrationContext(null));
     }
 
     /**
@@ -164,13 +186,22 @@ public class MappingConverter {
      * <p/>
      * Loaded child objects may themselves have references, so we iterate until the deferred queue is empty.
      */
-    @SuppressWarnings("unchecked")
     public void resolveDependencies(Session session) {
-        List<DeferredObjectLoader.DeferredObjectSetter> deferredObjects = DeferredObjectLoader.getAndClear();
+        resolveDependencies(new HydrationContext(session));
+    }
+
+    /**
+     * Resolve deferred reference dependencies using an explicit HydrationContext.
+     */
+    @SuppressWarnings("unchecked")
+    public void resolveDependencies(HydrationContext ctx) {
+        List<DeferredObjectLoader.DeferredObjectSetter> deferredObjects = ctx.getAndClearDeferred();
 
         if (deferredObjects.isEmpty()) {
             return;
         }
+
+        Session session = ctx.session();
 
         while (!deferredObjects.isEmpty()) {
             List<Key> keyList = new ArrayList<>();
@@ -183,7 +214,7 @@ public class MappingConverter {
                 ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, mapper);
 
                 Key aKey = createKey(entry, deferredObject);
-                Object result = LoadedObjectResolver.get(aKey);
+                Object result = ctx.getCached(aKey);
                 if (result != null) {
                     thisObjectSetter.getSetter().setValue(result);
                     iterator.remove();
@@ -209,23 +240,23 @@ public class MappingConverter {
                     DeferredObjectLoader.DeferredObjectSetter thisObjectSetter = deferredObjects.get(i);
                     Key key = keyList.get(i);
                     Record record = recordMap.get(key);
+                    ctx.pushKey(key);
                     try {
-                        ThreadLocalKeySaver.save(key);
                         Object obj = convertToObject(
                                 (Class<Object>) thisObjectSetter.getObject().getType(),
                                 key,
                                 record,
                                 (ClassCacheEntry<Object>) classCacheEntryList.get(i),
                                 false,
-                                session);
+                                ctx);
                         Object result = record == null ? null : obj;
                         thisObjectSetter.getSetter().setValue(result);
                     } finally {
-                        ThreadLocalKeySaver.clear();
+                        ctx.popKey();
                     }
                 }
             }
-            deferredObjects = DeferredObjectLoader.getAndClear();
+            deferredObjects = ctx.getAndClearDeferred();
         }
     }
 }

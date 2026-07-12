@@ -12,7 +12,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
 
 
-public class MapTest extends AeroMapperBaseTest {
+public class MapTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "A")
     public static class A {
         public String name;

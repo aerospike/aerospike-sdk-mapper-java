@@ -11,7 +11,7 @@ import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NamespacePlaceHolderTest extends AeroMapperBaseTest {
+public class NamespacePlaceHolderTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "${namespace.name:default}", set = "set1")
     public static class PlaceHolderModel {

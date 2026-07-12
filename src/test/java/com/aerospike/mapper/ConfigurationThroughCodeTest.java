@@ -17,7 +17,7 @@ import com.aerospike.mapper.tools.configuration.ClassConfig;
 
 import lombok.Data;
 
-public class ConfigurationThroughCodeTest extends AeroMapperBaseTest {
+public class ConfigurationThroughCodeTest extends MapperBaseTest {
 
     @Data
     @AerospikeRecord(namespace = "test")

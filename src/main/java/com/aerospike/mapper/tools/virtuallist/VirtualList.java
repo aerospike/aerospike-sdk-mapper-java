@@ -4,6 +4,7 @@ import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
+import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.IAeroMapper;
 import com.aerospike.mapper.tools.IBaseAeroMapper;
 import com.aerospike.mapper.tools.converters.MappingConverter;
@@ -42,7 +43,7 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
     private VirtualList(VirtualList<E> source, Session newSession) {
         super(newSession, source.mapper,
                 source.owningEntry, source.elementEntry, source.binName, source.listMapper,
-                source.listType, source.instanceMapper, source.key);
+                source.listType, source.key);
         this.mappingConverter = source.mappingConverter;
     }
 
@@ -52,12 +53,6 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
      */
     public VirtualList<E> withSession(Session session) {
         return new VirtualList<>(this, session);
-    }
-
-    public VirtualList<E> changeKey(Object newKey) {
-        String set = alignedSet();
-        this.key = new Key(owningEntry.getNamespace(), set, Value.get(owningEntry.translateKeyToAerospikeKey(newKey)));
-        return this;
     }
 
     public MultiOperation<E> beginMultiOperation() {
@@ -228,9 +223,10 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
             return null;
         }
         Object rawResult = record.getValue(binName);
-        E result = unpackSingleResult(rawResult);
+        HydrationContext ctx = new HydrationContext(getSession());
+        E result = unpackSingleResult(rawResult, ctx);
         if (result != null) {
-            mappingConverter.resolveDependencies(getSession());
+            mappingConverter.resolveDependencies(ctx);
         }
         return result;
     }
@@ -250,9 +246,10 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
         if (record == null) {
             return null;
         }
-        List<E> result = unpackListResult(record.getValue(binName));
+        HydrationContext ctx = new HydrationContext(getSession());
+        List<E> result = unpackListResult(record.getValue(binName), ctx);
         if (result != null && !result.isEmpty()) {
-            mappingConverter.resolveDependencies(getSession());
+            mappingConverter.resolveDependencies(ctx);
         }
         return result;
     }

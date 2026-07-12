@@ -3,6 +3,7 @@ package com.aerospike.mapper.tools.mappers;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.tools.*;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObject;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObjectSetter;
@@ -48,15 +49,24 @@ public class MapMapper extends TypeMapper {
         for (Object key : map.keySet()) {
             Object item = map.get(key);
 
-            TypeMapper keyMap = keyMapper != null ? keyMapper : TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper);
-            TypeMapper itemMap = itemMapper != null ? itemMapper : TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper);
-            results.put(keyMap.toAerospikeFormat(key), itemMap.toAerospikeFormat(item));
+            TypeMapper keyMap = keyMapper != null ? keyMapper
+                    : (key != null ? TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+            TypeMapper itemMap = itemMapper != null ? itemMapper
+                    : (item != null ? TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+            Object aeroKey = keyMap != null ? keyMap.toAerospikeFormat(key) : key;
+            Object aeroItem = itemMap != null ? itemMap.toAerospikeFormat(item) : item;
+            results.put(aeroKey, aeroItem);
         }
         return results;
     }
 
     @Override
     public Object fromAerospikeFormat(Object value) {
+        return fromAerospikeFormat(value, new HydrationContext(null));
+    }
+
+    @Override
+    public Object fromAerospikeFormat(Object value, HydrationContext ctx) {
         if (value == null) {
             return null;
         }
@@ -69,16 +79,19 @@ public class MapMapper extends TypeMapper {
         for (Object key : map.keySet()) {
             Object item = map.get(key);
 
-            TypeMapper keyMap = keyMapper != null ? keyMapper : TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper);
-            TypeMapper itemMap = itemMapper != null ? itemMapper : TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper);
-//			results.put(keyMap.fromAerospikeFormat(key), itemMap.fromAerospikeFormat(item));
+            TypeMapper keyMap = keyMapper != null ? keyMapper
+                    : (key != null ? TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+            TypeMapper itemMap = itemMapper != null ? itemMapper
+                    : (item != null ? TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
 
-            final Object javaKey = keyMap == null ? null : keyMap.fromAerospikeFormat(key);
-            final Object javaItem = itemMap == null ? null : itemMap.fromAerospikeFormat(item);
-            if (javaKey instanceof DeferredObject || javaItem instanceof DeferredObject) {
+            final Object javaKey = keyMap != null ? keyMap.fromAerospikeFormat(key, ctx) : key;
+            final Object javaItem = itemMap != null ? itemMap.fromAerospikeFormat(item, ctx) : item;
+            if (javaKey instanceof DeferredObject) {
+                throw new AerospikeException("Deferred object references as map keys are not supported");
+            }
+            if (javaItem instanceof DeferredObject) {
                 DeferredSetter setter = object -> results.put(javaKey, object);
-                DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) javaItem);
-                DeferredObjectLoader.add(objectSetter);
+                ctx.addDeferred(new DeferredObjectSetter(setter, (DeferredObject) javaItem));
             } else {
                 results.put(javaKey, javaItem);
             }

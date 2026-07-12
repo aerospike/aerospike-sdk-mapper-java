@@ -2,6 +2,7 @@ package com.aerospike.mapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.aerospike.mapper.GenerationAnnotationTest.GenerationEntity;
@@ -12,7 +13,13 @@ import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
-public class GenerationConfigurationTest extends AeroMapperBaseTest {
+public class GenerationConfigurationTest extends MapperBaseTest {
+
+    @BeforeEach
+    public void truncateGenerationSets() {
+        truncateSet(NAMESPACE, "configGenerationTest");
+        truncateSet(NAMESPACE, "generationTest");
+    }
 
     @AerospikeRecord(namespace = NAMESPACE, set = "configGenerationTest")
     public static class ConfigGenerationEntity {

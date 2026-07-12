@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import static com.aerospike.client.sdk.Value.UseBoolBin;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DefaultFieldValuesTest extends AeroMapperBaseTest {
+public class DefaultFieldValuesTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "testSet")
     public static class DefaultFieldsClass {

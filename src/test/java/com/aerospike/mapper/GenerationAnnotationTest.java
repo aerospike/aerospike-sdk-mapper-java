@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.aerospike.client.sdk.AerospikeException;
@@ -15,7 +16,14 @@ import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
-public class GenerationAnnotationTest extends AeroMapperBaseTest {
+public class GenerationAnnotationTest extends MapperBaseTest {
+
+    @BeforeEach
+    public void truncateGenerationSets() {
+        truncateSet(NAMESPACE, "generationTest");
+        truncateSet(NAMESPACE, "generationTestInteger");
+        truncateSet(NAMESPACE, "generationTestMethods");
+    }
 
     @AerospikeRecord(namespace = NAMESPACE, set = "generationTest")
     public static class GenerationEntity {
@@ -266,17 +274,6 @@ public class GenerationAnnotationTest extends AeroMapperBaseTest {
         
         GenerationEntity readEntity = mapper.read(GenerationEntity.class, 8);
         assertEquals(1, readEntity.getGeneration());
-    }
-
-    @Test
-    @org.junit.jupiter.api.Disabled("WritePolicy/GenerationPolicy API not available in new SDK")
-    public void testWritePolicyGeneration() {
-        MappingSession mapper = createMapper();
-        
-        mapper.delete(GenerationEntity.class, 9);
-
-        GenerationEntity entity = new GenerationEntity(9, "Policy Test");
-        entity.setGeneration(5);
     }
 
     @Test

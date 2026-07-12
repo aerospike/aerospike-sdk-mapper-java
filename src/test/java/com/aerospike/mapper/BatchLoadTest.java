@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class BatchLoadTest extends AeroMapperBaseTest {
+public class BatchLoadTest extends MapperBaseTest {
 
     private static final String DATA_BIN = "data";
     private final B[] bees = new B[100];

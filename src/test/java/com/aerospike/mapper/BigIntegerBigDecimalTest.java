@@ -13,7 +13,7 @@ import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class BigIntegerBigDecimalTest extends AeroMapperBaseTest {
+public class BigIntegerBigDecimalTest extends MapperBaseTest {
 
     @Data
     @AllArgsConstructor

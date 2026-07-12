@@ -17,7 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class LocalDateConverterTest extends AeroMapperBaseTest {
+public class LocalDateConverterTest extends MapperBaseTest {
 
     @Test
     public void testLocalDateTypes() {

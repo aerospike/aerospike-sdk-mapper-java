@@ -2,6 +2,7 @@ package com.aerospike.mapper.tools.virtuallist;
 
 import com.aerospike.client.sdk.Operation;
 import com.aerospike.client.sdk.Record;
+import com.aerospike.mapper.tools.HydrationContext;
 
 public class MultiOperation<E> extends AbstractMultiOperation<E, MultiOperation<E>> {
 
@@ -25,6 +26,7 @@ public class MultiOperation<E> extends AbstractMultiOperation<E, MultiOperation<
                 .execute()
                 .getFirstRecord();
 
-        return extractResult(record);
+        HydrationContext ctx = new HydrationContext(virtualList.getSession());
+        return extractResult(record, ctx);
     }
 }

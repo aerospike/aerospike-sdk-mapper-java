@@ -15,6 +15,7 @@ import com.aerospike.client.sdk.cdt.MapReturnType;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.ClassCacheEntry;
+import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.IBaseAeroMapper;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.ValueType;
@@ -26,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public abstract class BaseVirtualList<E> {
@@ -36,7 +36,6 @@ public abstract class BaseVirtualList<E> {
     protected final String binName;
     protected final ListMapper listMapper;
     protected final AerospikeEmbed.EmbedType listType;
-    protected final Function<Object, Object> instanceMapper;
     protected final IBaseAeroMapper mapper;
     protected final Session session;
     protected volatile Key key;
@@ -92,7 +91,6 @@ public abstract class BaseVirtualList<E> {
             throw new AerospikeException(String.format(
                     "Bin %s on class %s is not mapped via a listMapper. This is unexpected", binName, clazz.getSimpleName()));
         }
-        this.instanceMapper = listMapper::fromAerospikeInstanceFormat;
     }
 
     /**
@@ -102,8 +100,7 @@ public abstract class BaseVirtualList<E> {
     protected BaseVirtualList(Session session, IBaseAeroMapper mapper,
                               ClassCacheEntry<?> owningEntry, ClassCacheEntry<?> elementEntry,
                               String binName, ListMapper listMapper,
-                              AerospikeEmbed.EmbedType listType, Function<Object, Object> instanceMapper,
-                              Key key) {
+                              AerospikeEmbed.EmbedType listType, Key key) {
         this.mapper = mapper;
         this.session = session;
         this.owningEntry = owningEntry;
@@ -111,7 +108,6 @@ public abstract class BaseVirtualList<E> {
         this.binName = binName;
         this.listMapper = listMapper;
         this.listType = listType;
-        this.instanceMapper = instanceMapper;
         this.key = key;
     }
 
@@ -441,7 +437,7 @@ public abstract class BaseVirtualList<E> {
     }
 
     @SuppressWarnings("unchecked")
-    protected E unpackSingleResult(Object rawResult) {
+    protected E unpackSingleResult(Object rawResult, HydrationContext ctx) {
         if (rawResult == null) {
             return null;
         }
@@ -455,11 +451,11 @@ public abstract class BaseVirtualList<E> {
         if (rawResult == null) {
             return null;
         }
-        return (E) instanceMapper.apply(rawResult);
+        return (E) listMapper.fromAerospikeInstanceFormat(rawResult, ctx);
     }
 
     @SuppressWarnings("unchecked")
-    protected List<E> unpackListResult(Object rawResult) {
+    protected List<E> unpackListResult(Object rawResult, HydrationContext ctx) {
         if (rawResult == null) {
             return null;
         }
@@ -475,14 +471,14 @@ public abstract class BaseVirtualList<E> {
             });
             List<E> results = new ArrayList<>(entries.size());
             for (Map.Entry<?, ?> entry : entries) {
-                results.add((E) instanceMapper.apply(entry));
+                results.add((E) listMapper.fromAerospikeInstanceFormat(entry, ctx));
             }
             return results;
         } else if (rawResult instanceof Collection) {
             Collection<Object> source = (Collection<Object>) rawResult;
             List<E> results = new ArrayList<>(source.size());
             for (Object item : source) {
-                results.add((E) instanceMapper.apply(item));
+                results.add((E) listMapper.fromAerospikeInstanceFormat(item, ctx));
             }
             return results;
         }

@@ -11,7 +11,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeVersion;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class MessagesMappingTest extends AeroMapperBaseTest {
+public class MessagesMappingTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testSet")
     public static class InvalidVersion {
         @AerospikeKey

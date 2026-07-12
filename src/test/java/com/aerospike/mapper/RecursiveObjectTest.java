@@ -9,7 +9,7 @@ import com.aerospike.mapper.tools.MappingSession;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class RecursiveObjectTest extends AeroMapperBaseTest {
+public class RecursiveObjectTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "A")
     public static class A {
         public String name;

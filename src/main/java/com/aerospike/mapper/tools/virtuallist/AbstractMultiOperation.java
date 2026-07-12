@@ -3,13 +3,14 @@ package com.aerospike.mapper.tools.virtuallist;
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Operation;
 import com.aerospike.client.sdk.Record;
+import com.aerospike.mapper.tools.HydrationContext;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * Common base for {@link MultiOperation} and {@link ReactiveMultiOperation}.
+ * Common base for {@link MultiOperation} and {@link AsyncMultiOperation}.
  * Contains all fluent builder methods and operation accumulation state;
  * subclasses only override {@code end()} to choose sync vs async execution.
  *
@@ -238,7 +239,7 @@ public abstract class AbstractMultiOperation<E, S extends AbstractMultiOperation
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> T extractResult(Record record) {
+    protected <T> T extractResult(Record record, HydrationContext ctx) {
         if (record == null) {
             return null;
         }
@@ -252,7 +253,7 @@ public abstract class AbstractMultiOperation<E, S extends AbstractMultiOperation
             rawResult = record.operationResult(idx).getValue();
         }
 
-        T result = (T) virtualList.unpackListResult(rawResult);
+        T result = (T) virtualList.unpackListResult(rawResult, ctx);
 
         if (result != null) {
             Object object = result;
@@ -261,7 +262,7 @@ public abstract class AbstractMultiOperation<E, S extends AbstractMultiOperation
                 object = collection.isEmpty() ? null : collection.iterator().next();
             }
             if (object != null) {
-                virtualList.mapper.getMappingConverter().resolveDependencies(virtualList.getSession());
+                virtualList.mapper.getMappingConverter().resolveDependencies(ctx);
             }
         }
         return result;

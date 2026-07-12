@@ -12,7 +12,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class FactoryConstructorTest extends AeroMapperBaseTest {
+public class FactoryConstructorTest extends MapperBaseTest {
     public static class Factory {
         public static final String NO_ARG_FACTORY = "Created from factory";
         public static final String MAP_ARG_FACTORY = "Map arg factory";

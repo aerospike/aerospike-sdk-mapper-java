@@ -18,7 +18,7 @@ import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.MappingSession;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
-public class VirtualListWithKeyConstructorTest extends AeroMapperBaseTest {
+public class VirtualListWithKeyConstructorTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "C")
     public static class C {
         @AerospikeKey

@@ -47,13 +47,14 @@ public class AeroRecordMapper<T> implements RecordMapper<T> {
             return null;
         }
         Record rec = new Record(map, null, generation, 0);
+        HydrationContext ctx = new HydrationContext(session);
+        ctx.pushKey(recordKey);
         try {
-            ThreadLocalKeySaver.save(recordKey);
-            T result = entry.constructAndHydrate(recordKey, rec);
-            engine.getMappingConverter().resolveDependencies(session);
+            T result = entry.constructAndHydrate(recordKey, rec, ctx);
+            engine.getMappingConverter().resolveDependencies(ctx);
             return result;
         } finally {
-            ThreadLocalKeySaver.clear();
+            ctx.popKey();
         }
     }
 

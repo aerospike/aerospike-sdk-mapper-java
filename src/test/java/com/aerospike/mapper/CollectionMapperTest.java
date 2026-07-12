@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CollectionMapperTest extends AeroMapperBaseTest {
+import static org.junit.jupiter.api.Assertions.*;
+
+public class CollectionMapperTest extends MapperBaseTest {
     @AerospikeRecord
     public static class CollectionElement {
         @AerospikeKey
@@ -71,20 +73,16 @@ public class CollectionMapperTest extends AeroMapperBaseTest {
         mapper.save(collection);
 
         VirtualList<CollectionElement> list = mapper.asBackedList(collection, "elements", CollectionElement.class);
-//		list.append(new CollectionElement(103, "tom", 45678));
-//		System.out.println("Get by index returned: " + list.get(2));
-//		System.out.println("Delete by Key Range returned: " + list.removeByKeyRange(100, 102, true));
-        Object results = list.beginMultiOperation()
+        @SuppressWarnings("unchecked")
+        List<CollectionElement> results = (List<CollectionElement>) list.beginMultiOperation()
                 .append(new CollectionElement(103, "tom", 45678))
                 .append(new CollectionElement(104, "tim", 22222))
                 .append(new CollectionElement(105, "sam", 33333))
                 .append(new CollectionElement(106, "rob", 44444))
                 .getByKeyRange(101, 105)
-//				.removeByKeyRange(100, 102).asResult()
-//				.get(0)
-//				.size()
                 .end();
 
-        System.out.println(results);
+        assertNotNull(results);
+        assertFalse(results.isEmpty());
     }
 }

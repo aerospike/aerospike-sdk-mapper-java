@@ -19,7 +19,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-public class BaseClassWithNoAttributesTest extends AeroMapperBaseTest {
+public class BaseClassWithNoAttributesTest extends MapperBaseTest {
 
     @Data
     @SuperBuilder

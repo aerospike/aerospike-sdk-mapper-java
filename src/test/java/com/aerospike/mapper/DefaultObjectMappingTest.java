@@ -6,7 +6,7 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class DefaultObjectMappingTest extends AeroMapperBaseTest {
+public class DefaultObjectMappingTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testSet")
     public static class Child {
         public int age;

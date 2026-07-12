@@ -10,7 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class AnonymousReferencesTest extends AeroMapperBaseTest {
+public class AnonymousReferencesTest extends MapperBaseTest {
 
     @Test
     @SuppressWarnings({"unchecked", "rawtypes"})

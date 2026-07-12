@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static com.aerospike.client.sdk.Value.UseBoolBin;
 
-public class BooleanTest extends AeroMapperBaseTest {
+public class BooleanTest extends MapperBaseTest {
     @AfterAll
     public static void resetBooleanEncoding(){
         UseBoolBin = true;

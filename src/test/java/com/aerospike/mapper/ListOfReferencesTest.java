@@ -13,7 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ListOfReferencesTest extends AeroMapperBaseTest {
+public class ListOfReferencesTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "item")
     public static class Item {

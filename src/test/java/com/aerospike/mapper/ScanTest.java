@@ -19,7 +19,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class ScanTest extends AeroMapperBaseTest {
+public class ScanTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testScan")
     public static class Person {
         @AerospikeKey

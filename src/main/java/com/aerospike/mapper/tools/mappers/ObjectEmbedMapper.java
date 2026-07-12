@@ -4,6 +4,7 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.ClassCacheEntry;
+import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.IBaseAeroMapper;
 
 import java.util.List;
@@ -47,9 +48,14 @@ public class ObjectEmbedMapper extends ObjectMapper {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Object fromAerospikeFormat(Object value) {
+        return fromAerospikeFormat(value, new HydrationContext(null));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object fromAerospikeFormat(Object value, HydrationContext ctx) {
         if (value == null) {
             return null;
         }
@@ -59,9 +65,9 @@ public class ObjectEmbedMapper extends ObjectMapper {
         ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(referencedClass, mapper);
         try {
             if (value instanceof Map) {
-                return entry.constructAndHydrate((Map<String, Object>) value);
+                return entry.constructAndHydrate((Map<String, Object>) value, ctx);
             } else if (value instanceof List) {
-                return entry.constructAndHydrate((List<Object>) value, skipKey);
+                return entry.constructAndHydrate((List<Object>) value, skipKey, ctx);
             }
             throw new AerospikeException("Unexpected type for embedded object: " + value.getClass().getName());
         } catch (AerospikeException ae) {

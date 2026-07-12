@@ -15,7 +15,7 @@ import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class VirtualListReferenceTest extends AeroMapperBaseTest {
+public class VirtualListReferenceTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "A")
     public static class A {
         @AerospikeKey

@@ -13,7 +13,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeSetter;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class MultipleParameterSetterTest extends AeroMapperBaseTest {
+public class MultipleParameterSetterTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "A", mapAll = false)
     public static class A {

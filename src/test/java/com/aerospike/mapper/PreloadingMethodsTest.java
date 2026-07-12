@@ -24,7 +24,7 @@ import com.aerospike.mapper.tools.MappingSession;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-public class PreloadingMethodsTest extends AeroMapperBaseTest {
+public class PreloadingMethodsTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "zoo", mapAll = false)
     @NoArgsConstructor

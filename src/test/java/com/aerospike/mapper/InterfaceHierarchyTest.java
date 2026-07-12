@@ -16,7 +16,7 @@ import com.aerospike.mapper.tools.MappingSession;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-public class InterfaceHierarchyTest extends AeroMapperBaseTest {
+public class InterfaceHierarchyTest extends MapperBaseTest {
     @AerospikeRecord(set = "testSet", namespace = "test")
     public interface BaseInterface {
         String getName();

@@ -8,7 +8,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class ObjectReferencesTest extends AeroMapperBaseTest {
+public class ObjectReferencesTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "parent")
     public static class Parent {
         @AerospikeKey

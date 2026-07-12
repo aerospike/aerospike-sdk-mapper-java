@@ -7,7 +7,7 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class InheritanceTest extends AeroMapperBaseTest {
+public class InheritanceTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "A")
     public static class A {
         @AerospikeKey

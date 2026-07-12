@@ -15,7 +15,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeReference;
 import com.aerospike.mapper.tools.MappingSession;
 
-public class CompetingAnnotationsTest extends AeroMapperBaseTest {
+public class CompetingAnnotationsTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "A")
     public static class A {

@@ -133,18 +133,86 @@ public class ListMapper extends TypeMapper {
         return obj.getClass();
     }
 
-    public Object fromAerospikeInstanceFormat(Object obj) {
+    @Override
+    public Object fromAerospikeFormat(Object value) {
+        return fromAerospikeFormat(value, new HydrationContext(null));
+    }
+
+    @Override
+    public Object fromAerospikeFormat(Object value, HydrationContext ctx) {
+        if (value == null) {
+            return null;
+        }
+        List<Object> results = new ArrayList<>();
+        if (embedType == null || embedType == EmbedType.LIST) {
+            List<?> list = (List<?>) value;
+            if (list.isEmpty() || this.supportedWithoutTranslation) {
+                return value;
+            }
+
+            int index = 0;
+            if (instanceClass == null) {
+                for (Object obj : list) {
+                    if (obj == null) {
+                        results.add(null);
+                    } else {
+                        TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), mapper);
+                        Object result = thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj, ctx);
+                        if (result instanceof DeferredObject) {
+                            final int thisIndex = index;
+                            DeferredSetter setter = object -> results.set(thisIndex, object);
+                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) result);
+                            ctx.addDeferred(objectSetter);
+                            results.add(null);
+                        } else {
+                            results.add(result);
+                        }
+                    }
+                    index++;
+                }
+            } else {
+                for (Object obj : list) {
+                    if (!allowBatchLoad) {
+                        results.add(this.instanceClassMapper.fromAerospikeFormat(obj, ctx));
+                    } else {
+                        Object result = this.instanceClassMapper.fromAerospikeFormat(obj, ctx);
+                        if (result instanceof DeferredObject) {
+                            final int thisIndex = index;
+                            DeferredSetter setter = object -> results.set(thisIndex, object);
+                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) result);
+                            ctx.addDeferred(objectSetter);
+                            results.add(null);
+                        } else {
+                            results.add(result);
+                        }
+                    }
+                    index++;
+                }
+            }
+        } else {
+            Map<?, ?> map = (Map<?, ?>) value;
+            for (Object key : map.keySet()) {
+                Object item = map.get(key);
+
+                Object result = this.instanceClassMapper.fromAerospikeFormat(item, ctx);
+                subTypeEntry.setKey(result, key, ctx);
+                results.add(result);
+            }
+        }
+        return results;
+    }
+
+    public Object fromAerospikeInstanceFormat(Object obj, HydrationContext ctx) {
         if (embedType == null || embedType == EmbedType.LIST) {
             if (instanceClass == null) {
-                // We don't have any hints as to how to translate them, we have to look up each type
                 if (obj == null) {
                     return null;
                 } else {
                     TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), mapper);
-                    return thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj);
+                    return thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj, ctx);
                 }
             } else {
-                return this.instanceClassMapper.fromAerospikeFormat(obj);
+                return this.instanceClassMapper.fromAerospikeFormat(obj, ctx);
             }
         } else {
             Object mapKey;
@@ -165,76 +233,9 @@ public class ListMapper extends TypeMapper {
             } else {
                 throw new AerospikeException("Unexpected type for MAP embed element: " + obj.getClass().getName());
             }
-            Object result = this.instanceClassMapper.fromAerospikeFormat(mapValue);
-            subTypeEntry.setKey(result, mapKey);
+            Object result = this.instanceClassMapper.fromAerospikeFormat(mapValue, ctx);
+            subTypeEntry.setKey(result, mapKey, ctx);
             return result;
         }
-    }
-
-    @Override
-    public Object fromAerospikeFormat(Object value) {
-        if (value == null) {
-            return null;
-        }
-        List<Object> results = new ArrayList<>();
-        if (embedType == null || embedType == EmbedType.LIST) {
-            List<?> list = (List<?>) value;
-            if (list.size() == 0 || this.supportedWithoutTranslation) {
-                return value;
-            }
-
-            int index = 0;
-            if (instanceClass == null) {
-                // We don't have any hints as to how to translate them, we have to look up each type
-                for (Object obj : list) {
-                    if (obj == null) {
-                        results.add(null);
-                    } else {
-                        TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), mapper);
-                        Object result = thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj);
-                        if (result instanceof DeferredObject) {
-                            final int thisIndex = index;
-                            DeferredSetter setter = object -> results.set(thisIndex, object);
-                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) result);
-                            DeferredObjectLoader.add(objectSetter);
-                            // add a placeholder to maintain the index
-                            results.add(null);
-                        } else {
-                            results.add(result);
-                        }
-                    }
-                    index++;
-                }
-            } else {
-                for (Object obj : list) {
-                    if (!allowBatchLoad) {
-                        results.add(this.instanceClassMapper.fromAerospikeFormat(obj));
-                    } else {
-                        Object result = this.instanceClassMapper.fromAerospikeFormat(obj);
-                        if (result instanceof DeferredObject) {
-                            final int thisIndex = index;
-                            DeferredSetter setter = object -> results.set(thisIndex, object);
-                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) result);
-                            DeferredObjectLoader.add(objectSetter);
-                            // add a placeholder to maintain the index
-                            results.add(null);
-                        } else {
-                            results.add(result);
-                        }
-                    }
-                    index++;
-                }
-            }
-        } else {
-            Map<?, ?> map = (Map<?, ?>) value;
-            for (Object key : map.keySet()) {
-                Object item = map.get(key);
-
-                Object result = this.instanceClassMapper.fromAerospikeFormat(item);
-                subTypeEntry.setKey(result, key);
-                results.add(result);
-            }
-        }
-        return results;
     }
 }

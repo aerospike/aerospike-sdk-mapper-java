@@ -26,7 +26,7 @@ import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.MappingSession;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class QueryTest extends AeroMapperBaseTest {
+public class QueryTest extends MapperBaseTest {
     @AerospikeRecord(namespace = "test", set = "testScan")
     public static class A {
         @AerospikeKey

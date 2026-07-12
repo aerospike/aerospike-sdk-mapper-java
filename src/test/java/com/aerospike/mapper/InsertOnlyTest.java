@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class InsertOnlyTest extends AeroMapperBaseTest {
+public class InsertOnlyTest extends MapperBaseTest {
 
     @AerospikeRecord(namespace = "test", set = "testSet")
     public static class DataClass {

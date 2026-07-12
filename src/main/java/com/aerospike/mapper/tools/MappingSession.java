@@ -2,14 +2,21 @@ package com.aerospike.mapper.tools;
 
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.RecordResult;
+import com.aerospike.client.sdk.RecordStream;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.client.sdk.policy.Behavior;
+import com.aerospike.mapper.tools.virtuallist.AsyncVirtualList;
 import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
 
 /**
  * A {@link Session} subclass that adds annotation-driven CRUD, virtual lists,
@@ -198,6 +205,86 @@ public class MappingSession extends Session {
         return new VirtualList<>(this, engine.getInternalMapper(), owningClazz, key, binName, elementClazz);
     }
 
+    // -- Async convenience API --
+    // Uses SDK's native executeAsync for true non-blocking operations.
+
+    public <T> CompletableFuture<Void> saveAsync(@NotNull T object, String... binNames) {
+        return engine.writeObjectAsync(this, object, MappingEngine.WriteOp.REPLACE, java.util.OptionalInt.empty(), binNames);
+    }
+
+    public <T> CompletableFuture<Void> insertAsync(@NotNull T object, String... binNames) {
+        return engine.writeObjectAsync(this, object, MappingEngine.WriteOp.INSERT, java.util.OptionalInt.empty(), binNames);
+    }
+
+    public <T> CompletableFuture<Void> updateAsync(@NotNull T object, String... binNames) {
+        return engine.writeObjectAsync(this, object, MappingEngine.WriteOp.UPSERT, java.util.OptionalInt.empty(), binNames);
+    }
+
+    public <T> CompletableFuture<T> readAsync(@NotNull Class<T> clazz, @NotNull Object userKey) {
+        return engine.readSingleAsync(this, clazz, userKey);
+    }
+
+    public <T> CompletableFuture<T> readFromDigestAsync(@NotNull Class<T> clazz, @NotNull byte[] digest) {
+        return engine.readFromDigestAsync(this, clazz, digest);
+    }
+
+    public <T> CompletableFuture<List<T>> readAsync(@NotNull Class<T> clazz, @NotNull Object[] userKeys) {
+        return CompletableFuture.supplyAsync(() -> {
+            T[] results = read(clazz, userKeys);
+            return new ArrayList<>(Arrays.asList(results));
+        }, engine.asyncExecutor());
+    }
+
+    public <T> CompletableFuture<Boolean> deleteAsync(@NotNull Class<T> clazz, @NotNull Object userKey) {
+        return engine.deleteByKeyAsync(this, clazz, userKey);
+    }
+
+    public CompletableFuture<Boolean> deleteAsync(@NotNull Object object) {
+        return engine.deleteByObjectAsync(this, object);
+    }
+
+    public <T> Flow.Publisher<T> scanPublisher(@NotNull Class<T> clazz) {
+        return queryPublisher(clazz, (String) null);
+    }
+
+    public <T> Flow.Publisher<T> queryPublisher(@NotNull Class<T> clazz, String aelExpression) {
+        return subscriber -> {
+            ClassCacheEntry<T> entry = engine.loadClass(clazz);
+            RecordStream stream = engine.buildQueryStream(this, clazz, aelExpression, null);
+            try {
+                Flow.Publisher<RecordResult> raw = stream.asPublisher();
+                raw.subscribe(new MappingSubscriber<>(subscriber, clazz, entry, this, engine.getMappingConverter()));
+            } catch (Throwable t) {
+                stream.close();
+                throw t;
+            }
+        };
+    }
+
+    public <T> Flow.Publisher<T> queryPublisher(@NotNull Class<T> clazz, @NotNull Expression filterExp) {
+        return subscriber -> {
+            ClassCacheEntry<T> entry = engine.loadClass(clazz);
+            RecordStream stream = engine.buildQueryStream(this, clazz, null, filterExp);
+            try {
+                Flow.Publisher<RecordResult> raw = stream.asPublisher();
+                raw.subscribe(new MappingSubscriber<>(subscriber, clazz, entry, this, engine.getMappingConverter()));
+            } catch (Throwable t) {
+                stream.close();
+                throw t;
+            }
+        };
+    }
+
+    public <T> AsyncVirtualList<T> asBackedListAsync(@NotNull Object object,
+            @NotNull String binName, Class<T> elementClazz) {
+        return new AsyncVirtualList<>(this, engine.getInternalMapper(), object, binName, elementClazz);
+    }
+
+    public <T> AsyncVirtualList<T> asBackedListAsync(@NotNull Class<?> owningClazz,
+            @NotNull Object key, @NotNull String binName, Class<T> elementClazz) {
+        return new AsyncVirtualList<>(this, engine.getInternalMapper(), owningClazz, key, binName, elementClazz);
+    }
+
     // -- Transactions --
 
     /**
@@ -218,10 +305,23 @@ public class MappingSession extends Session {
      * </ul>
      */
     public void doInMappingTransaction(MappingTransactionalVoid operation) {
-        doInTransaction(txn -> {
-            MappingSession txnView = new TxnMappingView(engine, txn);
-            operation.execute(txnView);
-        });
+        RuntimeException[] userException = {null};
+        try {
+            doInTransaction(txn -> {
+                MappingSession txnView = new TxnMappingView(engine, txn);
+                try {
+                    operation.execute(txnView);
+                } catch (RuntimeException e) {
+                    userException[0] = e;
+                    throw e;
+                }
+            });
+        } catch (RuntimeException e) {
+            if (userException[0] != null) {
+                throw userException[0];
+            }
+            throw e;
+        }
     }
 
     /**
@@ -230,10 +330,23 @@ public class MappingSession extends Session {
      * on the transactional view.
      */
     public <T> T doInMappingTransactionReturning(MappingTransactional<T> operation) {
-        return doInTransactionReturning(txn -> {
-            MappingSession txnView = new TxnMappingView(engine, txn);
-            return operation.execute(txnView);
-        });
+        RuntimeException[] userException = {null};
+        try {
+            return doInTransactionReturning(txn -> {
+                MappingSession txnView = new TxnMappingView(engine, txn);
+                try {
+                    return operation.execute(txnView);
+                } catch (RuntimeException e) {
+                    userException[0] = e;
+                    throw e;
+                }
+            });
+        } catch (RuntimeException e) {
+            if (userException[0] != null) {
+                throw userException[0];
+            }
+            throw e;
+        }
     }
 
     // -- Behavior switching --

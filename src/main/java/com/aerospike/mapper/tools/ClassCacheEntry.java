@@ -34,6 +34,7 @@ import com.aerospike.mapper.annotations.AerospikeSetter;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.annotations.AerospikeGeneration;
 import com.aerospike.mapper.exceptions.NotAnnotatedClass;
+import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObject;
 import com.aerospike.mapper.tools.configuration.BinConfig;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 import com.aerospike.mapper.tools.configuration.KeyConfig;
@@ -895,16 +896,28 @@ public class ClassCacheEntry<T> {
     }
 
     private void _setKey(Object object, Object value) throws ReflectiveOperationException {
+        _setKey(object, value, new HydrationContext(null));
+    }
+
+    private void _setKey(Object object, Object value, HydrationContext ctx) throws ReflectiveOperationException {
         if (this.key != null) {
-            this.key.set(object, this.key.getTypeMapper().fromAerospikeFormat(value));
+            this.key.set(object, this.key.getTypeMapper().fromAerospikeFormat(value, ctx), ctx);
         } else if (superClazz != null) {
-            this.superClazz._setKey(object, value);
+            this.superClazz._setKey(object, value, ctx);
         }
     }
 
     public void setKey(Object object, Object value) {
         try {
             this._setKey(object, value);
+        } catch (ReflectiveOperationException re) {
+            throw new AerospikeException(re);
+        }
+    }
+
+    public void setKey(Object object, Object value, HydrationContext ctx) {
+        try {
+            this._setKey(object, value, ctx);
         } catch (ReflectiveOperationException re) {
             throw new AerospikeException(re);
         }
@@ -1065,22 +1078,28 @@ public class ClassCacheEntry<T> {
     }
 
     public T constructAndHydrate(Map<String, Object> map) {
-        return constructAndHydrate(null, null, map);
+        return constructAndHydrate(map, new HydrationContext(null));
+    }
+
+    public T constructAndHydrate(Map<String, Object> map, HydrationContext ctx) {
+        return constructAndHydrate(null, null, map, ctx);
     }
 
     public T constructAndHydrate(Key key, Record record) {
-        return constructAndHydrate(key, record, null);
+        return constructAndHydrate(key, record, new HydrationContext(null));
+    }
+
+    public T constructAndHydrate(Key key, Record record, HydrationContext ctx) {
+        return constructAndHydrate(key, record, (Map<String, Object>) null, ctx);
     }
 
     @SuppressWarnings("unchecked")
-    private T constructAndHydrate(Key key, Record record, Map<String, Object> map) {
+    private T constructAndHydrate(Key key, Record record, Map<String, Object> map, HydrationContext ctx) {
         Map<String, Object> valueMap = new HashMap<>();
         try {
             ClassCacheEntry<?> thisClass = this;
 
-            // If the object saved in the list was a subclass of the declared type, it must
-            // have the type name in the map
-            // Note that there is a performance implication of using subclasses.
+            // If a concrete subtype was stored, its type name is recorded in the map.
             String className = map == null ? record.getString(TYPE_NAME) : (String) map.get(TYPE_NAME);
             if (className != null) {
                 thisClass = ClassCache.getInstance().getCacheEntryFromStoredName(className);
@@ -1107,14 +1126,14 @@ public class ClassCacheEntry<T> {
                     } else {
                         aerospikeValue = record.getValue(name);
                     }
-                    valueMap.put(name, value.getTypeMapper().fromAerospikeFormat(aerospikeValue));
+                    valueMap.put(name, value.getTypeMapper().fromAerospikeFormat(aerospikeValue, ctx));
                 }
                 if (result == null) {
-                    result = (T) thisClass.constructAndHydrateFromJavaMap(valueMap);
+                    result = (T) thisClass.constructAndHydrateFromJavaMap(valueMap, ctx);
                 } else {
                     for (String field : valueMap.keySet()) {
                         ValueType value = thisClass.values.get(field);
-                        value.set(result, valueMap.get(field));
+                        value.set(result, valueMap.get(field), ctx);
                     }
                 }
                 valueMap.clear();
@@ -1137,21 +1156,17 @@ public class ClassCacheEntry<T> {
     }
 
     public void hydrateFromRecord(Record record, Object instance) {
-        this.hydrateFromRecordOrMap(record, null, instance);
+        hydrateFromRecordOrMap(record, null, instance, new HydrationContext(null));
     }
 
-    public void hydrateFromMap(Map<String, Object> map, Object instance) {
-        this.hydrateFromRecordOrMap(null, map, instance);
-    }
-
-    private void hydrateFromRecordOrMap(Record record, Map<String, Object> map, Object instance) {
+    private void hydrateFromRecordOrMap(Record record, Map<String, Object> map, Object instance, HydrationContext ctx) {
         try {
             ClassCacheEntry<?> thisClass = this;
             while (thisClass != null) {
                 for (String name : thisClass.values.keySet()) {
                     ValueType value = thisClass.values.get(name);
                     Object aerospikeValue = record == null ? map.get(name) : record.getValue(name);
-                    value.set(instance, value.getTypeMapper().fromAerospikeFormat(aerospikeValue));
+                    value.set(instance, value.getTypeMapper().fromAerospikeFormat(aerospikeValue, ctx), ctx);
                 }
                 thisClass = thisClass.superClazz;
             }
@@ -1161,7 +1176,7 @@ public class ClassCacheEntry<T> {
     }
 
     private int setValueByField(String name, int objectVersion, int recordVersion, Object instance, int index,
-            List<Object> list, Map<String, Object> map) throws ReflectiveOperationException {
+            List<Object> list, Map<String, Object> map, HydrationContext ctx) throws ReflectiveOperationException {
         ValueType value = this.values.get(name);
         TypeMapper typeMapper = value.getTypeMapper();
         // If the version of this value does not exist on this object, simply skip it.
@@ -1180,11 +1195,11 @@ public class ClassCacheEntry<T> {
         if (value.getMinimumVersion() <= recordVersion && recordVersion <= value.getMaximumVersion()
                 && index < list.size()) {
             Object aerospikeValue = list.get(index++);
-            Object javaValue = aerospikeValue == null ? null : typeMapper.fromAerospikeFormat(aerospikeValue);
+            Object javaValue = aerospikeValue == null ? null : typeMapper.fromAerospikeFormat(aerospikeValue, ctx);
             if (instance == null) {
                 map.put(name, javaValue);
             } else {
-                value.set(instance, javaValue);
+                value.set(instance, javaValue, ctx);
             }
         }
         return index;
@@ -1195,7 +1210,7 @@ public class ClassCacheEntry<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private T constructAndHydrateFromJavaMap(Map<String, Object> javaValuesMap) throws ReflectiveOperationException {
+    private T constructAndHydrateFromJavaMap(Map<String, Object> javaValuesMap, HydrationContext ctx) throws ReflectiveOperationException {
         // Now form the values which satisfy the constructor
         T result;
         if (factoryConstructorMethod != null) {
@@ -1218,7 +1233,27 @@ public class ClassCacheEntry<T> {
             Object[] args = new Object[constructorParamBins.length];
             for (int i = 0; i < constructorParamBins.length; i++) {
                 if (javaValuesMap.containsKey(constructorParamBins[i])) {
-                    args[i] = javaValuesMap.get(constructorParamBins[i]);
+                    Object val = javaValuesMap.get(constructorParamBins[i]);
+                    if (val instanceof DeferredObject) {
+                        DeferredObject deferred = (DeferredObject) val;
+                        MappingEngine engine = MappingEngine.fromMapper(mapper);
+                        if (engine != null) {
+                            if (deferred.isDigest()) {
+                                val = engine.readFromDigest(ctx, deferred.getType(), (byte[]) deferred.getKey(), false);
+                            } else {
+                                val = engine.read(ctx, deferred.getType(), deferred.getKey(), false);
+                            }
+                        } else {
+                            if (deferred.isDigest()) {
+                                val = mapper.asMapper().readFromDigest(
+                                        deferred.getType(), (byte[]) deferred.getKey(), false);
+                            } else {
+                                val = mapper.asMapper().read(
+                                        deferred.getType(), deferred.getKey(), false);
+                            }
+                        }
+                    }
+                    args[i] = val;
                 } else {
                     args[i] = constructorParamDefaults[i];
                 }
@@ -1226,10 +1261,7 @@ public class ClassCacheEntry<T> {
             }
             result = constructor.newInstance(args);
         }
-        // Once the object has been created, we need to store it against the current key
-        // so that
-        // recursive objects resolve correctly
-        LoadedObjectResolver.setObjectForCurrentKey(result);
+        ctx.cacheCurrentObject(result);
 
         for (String field : javaValuesMap.keySet()) {
             ValueType value = this.values.get(field);
@@ -1237,22 +1269,24 @@ public class ClassCacheEntry<T> {
             if (object == null && value.getType().isPrimitive()) {
                 object = PrimitiveDefaults.getDefaultValue(value.getType());
             }
-            value.set(result, object);
+            value.set(result, object, ctx);
         }
         return result;
     }
 
-    @SuppressWarnings("unchecked")
     public T constructAndHydrate(List<Object> list, boolean skipKey) {
+        return constructAndHydrate(list, skipKey, new HydrationContext(null));
+    }
+
+    @SuppressWarnings("unchecked")
+    public T constructAndHydrate(List<Object> list, boolean skipKey, HydrationContext ctx) {
         Map<String, Object> valueMap = new HashMap<>();
         try {
             ClassCacheEntry<?> thisClass = this;
             int index = 0;
             int endIndex = list.size();
             if (!list.isEmpty()) {
-                // If the object saved in the list was a subclass of the declared type,
-                // it must have the type name as the last element of the list.
-                // Note that there is a performance implication of using subclasses.
+                // If a concrete subtype was stored, its type marker is recorded as the last list element.
                 Object obj = list.get(endIndex - 1);
                 if ((obj instanceof String) && ((String) obj).startsWith(TYPE_PREFIX)) {
                     String className = ((String) obj).substring(TYPE_PREFIX.length());
@@ -1280,7 +1314,7 @@ public class ClassCacheEntry<T> {
                             String name = thisClass.ordinals.get(i);
                             if (!skipKey || !isKeyField(name)) {
                                 index = thisClass.setValueByField(name, objectVersion, recordVersion, null, index, list,
-                                        valueMap);
+                                        valueMap, ctx);
                             }
                         }
                     }
@@ -1288,16 +1322,16 @@ public class ClassCacheEntry<T> {
                         if (thisClass.fieldsWithOrdinals == null || !thisClass.fieldsWithOrdinals.contains(name)) {
                             if (!skipKey || !isKeyField(name)) {
                                 index = thisClass.setValueByField(name, objectVersion, recordVersion, null, index, list,
-                                        valueMap);
+                                        valueMap, ctx);
                             }
                         }
                     }
                     if (result == null) {
-                        result = (T) thisClass.constructAndHydrateFromJavaMap(valueMap);
+                        result = (T) thisClass.constructAndHydrateFromJavaMap(valueMap, ctx);
                     } else {
                         for (String field : valueMap.keySet()) {
-                            ValueType value = this.values.get(field);
-                            value.set(result, valueMap.get(field));
+                            ValueType value = thisClass.values.get(field);
+                            value.set(result, valueMap.get(field), ctx);
                         }
                     }
                     valueMap.clear();
@@ -1311,6 +1345,10 @@ public class ClassCacheEntry<T> {
     }
 
     public void hydrateFromList(List<Object> list, Object instance, boolean skipKey) {
+        hydrateFromList(list, instance, skipKey, new HydrationContext(null));
+    }
+
+    public void hydrateFromList(List<Object> list, Object instance, boolean skipKey, HydrationContext ctx) {
         try {
             int index = 0;
             int endIndex = list.size();
@@ -1329,7 +1367,7 @@ public class ClassCacheEntry<T> {
                             String name = thisClass.ordinals.get(i);
                             if (!skipKey || !isKeyField(name)) {
                                 index = thisClass.setValueByField(name, objectVersion, recordVersion, instance, index, list,
-                                        null);
+                                        null, ctx);
                             }
                         }
                     }
@@ -1337,7 +1375,7 @@ public class ClassCacheEntry<T> {
                         if (thisClass.fieldsWithOrdinals == null || !thisClass.fieldsWithOrdinals.contains(name)) {
                             if (!skipKey || !isKeyField(name)) {
                                 index = thisClass.setValueByField(name, objectVersion, recordVersion, instance, index, list,
-                                        null);
+                                        null, ctx);
                             }
                         }
                     }
