@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +29,7 @@ import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordMappingFactory;
 import com.aerospike.client.sdk.RecordResult;
 import com.aerospike.client.sdk.RecordStream;
+import com.aerospike.client.sdk.ResultCode;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.SessionExtension;
 import com.aerospike.client.sdk.TypedDataSet;
@@ -169,7 +171,8 @@ public class MappingEngine implements AutoCloseable {
      * Intended for internal use by built-in mappers that must preserve the
      * parent {@link HydrationContext}'s cache, deferred queue, and key stack.
      */
-    public <T> T readWithContext(HydrationContext ctx, Class<T> clazz, Object userKey, boolean resolveDependencies) {
+    public <T> Optional<T> readWithContext(HydrationContext ctx, Class<T> clazz, Object userKey,
+                                           boolean resolveDependencies) {
         return read(ctx, clazz, userKey, resolveDependencies);
     }
 
@@ -178,8 +181,8 @@ public class MappingEngine implements AutoCloseable {
      * Intended for internal use by built-in mappers that must preserve the
      * parent {@link HydrationContext}'s cache, deferred queue, and key stack.
      */
-    public <T> T readFromDigestWithContext(HydrationContext ctx, Class<T> clazz, byte[] digest,
-                                           boolean resolveDependencies) {
+    public <T> Optional<T> readFromDigestWithContext(HydrationContext ctx, Class<T> clazz, byte[] digest,
+                                                     boolean resolveDependencies) {
         return readFromDigest(ctx, clazz, digest, resolveDependencies);
     }
 
@@ -321,55 +324,25 @@ public class MappingEngine implements AutoCloseable {
                 });
     }
 
-    <T> CompletableFuture<T> readSingleAsync(Session session, Class<T> clazz, Object userKey) {
+    <T> CompletableFuture<Optional<T>> readSingleAsync(Session session, Class<T> clazz, Object userKey) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         String set = entry.getSetName();
         Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
 
-        return session.query(List.of(key))
+        return session.query(key)
                 .executeAsync(ErrorStrategy.IN_STREAM)
-                .asCompletableFuture()
-                .thenApply(results -> {
-                    if (results == null || results.isEmpty()) {
-                        return null;
-                    }
-                    RecordResult rr = results.get(0);
-                    if (!rr.isOk() || rr.recordOrNull() == null) {
-                        return null;
-                    }
-                    HydrationContext ctx = new HydrationContext(session);
-                    ctx.pushKey(key);
-                    try {
-                        return mappingConverter.convertToObject(clazz, key, rr.recordOrNull(), entry, true, ctx);
-                    } finally {
-                        ctx.popKey();
-                    }
-                });
+                .asCompletableFutureSingle()
+                .thenApply(firstResult -> mapSingleReadResult(firstResult, session, clazz, key, entry, true));
     }
 
-    <T> CompletableFuture<T> readFromDigestAsync(Session session, Class<T> clazz, byte[] digest) {
+    <T> CompletableFuture<Optional<T>> readFromDigestAsync(Session session, Class<T> clazz, byte[] digest) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
 
-        return session.query(List.of(key))
+        return session.query(key)
                 .executeAsync(ErrorStrategy.IN_STREAM)
-                .asCompletableFuture()
-                .thenApply(results -> {
-                    if (results == null || results.isEmpty()) {
-                        return null;
-                    }
-                    RecordResult rr = results.get(0);
-                    if (!rr.isOk() || rr.recordOrNull() == null) {
-                        return null;
-                    }
-                    HydrationContext ctx = new HydrationContext(session);
-                    ctx.pushKey(key);
-                    try {
-                        return mappingConverter.convertToObject(clazz, key, rr.recordOrNull(), entry, true, ctx);
-                    } finally {
-                        ctx.popKey();
-                    }
-                });
+                .asCompletableFutureSingle()
+                .thenApply(firstResult -> mapSingleReadResult(firstResult, session, clazz, key, entry, true));
     }
 
     <T> CompletableFuture<Boolean> deleteByKeyAsync(Session session, Class<T> clazz, Object userKey) {
@@ -487,74 +460,94 @@ public class MappingEngine implements AutoCloseable {
         return Math.toIntExact(seconds);
     }
 
-    <T> T readFromDigest(Session session, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
+    <T> Optional<T> readFromDigest(Session session, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
         return readSingle(session, clazz, key, entry, resolveDependencies);
     }
 
-    <T> T read(Session session, Class<T> clazz, Object userKey, boolean resolveDependencies) {
+    <T> Optional<T> read(Session session, Class<T> clazz, Object userKey, boolean resolveDependencies) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         String set = entry.getSetName();
         Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
         return readSingle(session, clazz, key, entry, resolveDependencies);
     }
 
-    <T> T readFromDigest(HydrationContext ctx, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
+    <T> Optional<T> readFromDigest(HydrationContext ctx, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
         return readSingle(ctx, clazz, key, entry, resolveDependencies);
     }
 
-    <T> T read(HydrationContext ctx, Class<T> clazz, Object userKey, boolean resolveDependencies) {
+    <T> Optional<T> read(HydrationContext ctx, Class<T> clazz, Object userKey, boolean resolveDependencies) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
         String set = entry.getSetName();
         Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
         return readSingle(ctx, clazz, key, entry, resolveDependencies);
     }
 
-    private <T> T readSingle(Session session, Class<T> clazz, Key key, ClassCacheEntry<T> entry,
-                             boolean resolveDependencies) {
-        Record record;
-        try (RecordStream stream = session.query(List.of(key)).execute()) {
-            RecordResult rr = stream.hasNext() ? stream.next() : null;
-            record = (rr != null && rr.isOk()) ? rr.recordOrNull() : null;
-        }
-
-        if (record == null) {
-            return null;
-        }
-
-        HydrationContext ctx = new HydrationContext(session);
-        ctx.pushKey(key);
-        try {
-            return mappingConverter.convertToObject(clazz, key, record, entry, resolveDependencies, ctx);
-        } finally {
-            ctx.popKey();
+    private <T> Optional<T> readSingle(Session session, Class<T> clazz, Key key, ClassCacheEntry<T> entry,
+                                       boolean resolveDependencies) {
+        try (RecordStream stream = session.query(key).execute()) {
+            return mapSingleReadResult(stream.getFirst(false), session, clazz, key, entry, resolveDependencies);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T readSingle(HydrationContext ctx, Class<T> clazz, Key key, ClassCacheEntry<T> entry,
-                             boolean resolveDependencies) {
+    private <T> Optional<T> readSingle(HydrationContext ctx, Class<T> clazz, Key key, ClassCacheEntry<T> entry,
+                                       boolean resolveDependencies) {
         Object objectForKey = ctx.getCached(key);
         if (objectForKey != null) {
-            return (T) objectForKey;
+            return Optional.of((T) objectForKey);
         }
 
-        Record record;
-        try (RecordStream stream = ctx.session().query(List.of(key)).execute()) {
-            RecordResult rr = stream.hasNext() ? stream.next() : null;
-            record = (rr != null && rr.isOk()) ? rr.recordOrNull() : null;
+        try (RecordStream stream = ctx.session().query(key).execute()) {
+            Optional<RecordResult> firstResult = stream.getFirst(false);
+            if (firstResult.isEmpty()) {
+                return Optional.empty();
+            }
+
+            RecordResult recordResult = firstResult.get();
+            if (isMissingSingleRead(recordResult)) {
+                return Optional.empty();
+            }
+
+            recordResult.orThrow();
+            Record loadedRecord = recordResult.recordOrNull();
+
+            ctx.pushKey(key);
+            try {
+                return Optional.ofNullable(
+                        mappingConverter.convertToObject(clazz, key, loadedRecord, entry, resolveDependencies, ctx));
+            } finally {
+                ctx.popKey();
+            }
+        }
+    }
+
+    private static boolean isMissingSingleRead(RecordResult recordResult) {
+        return recordResult.resultCode() == ResultCode.KEY_NOT_FOUND_ERROR || recordResult.recordOrNull() == null;
+    }
+
+    private <T> Optional<T> mapSingleReadResult(Optional<RecordResult> firstResult, Session session, Class<T> clazz,
+                                                Key key, ClassCacheEntry<T> entry, boolean resolveDependencies) {
+        if (firstResult.isEmpty()) {
+            return Optional.empty();
         }
 
-        if (record == null) {
-            return null;
+        RecordResult recordResult = firstResult.get();
+        if (isMissingSingleRead(recordResult)) {
+            return Optional.empty();
         }
 
+        recordResult.orThrow();
+        Record loadedRecord = recordResult.recordOrNull();
+
+        HydrationContext ctx = new HydrationContext(session);
         ctx.pushKey(key);
         try {
-            return mappingConverter.convertToObject(clazz, key, record, entry, resolveDependencies, ctx);
+            return Optional.ofNullable(
+                    mappingConverter.convertToObject(clazz, key, loadedRecord, entry, resolveDependencies, ctx));
         } finally {
             ctx.popKey();
         }
@@ -585,13 +578,13 @@ public class MappingEngine implements AutoCloseable {
         T[] results = (T[]) Array.newInstance(clazz, keys.length);
         HydrationContext ctx = new HydrationContext(session);
         for (int i = 0; i < keys.length; i++) {
-            Record record = recordMap.get(keys[i]);
-            if (record == null) {
+            Record loadedRecord = recordMap.get(keys[i]);
+            if (loadedRecord == null) {
                 results[i] = null;
             } else {
                 ctx.pushKey(keys[i]);
                 try {
-                    results[i] = mappingConverter.convertToObject(clazz, keys[i], record, entry, false, ctx);
+                    results[i] = mappingConverter.convertToObject(clazz, keys[i], loadedRecord, entry, false, ctx);
                 } finally {
                     ctx.popKey();
                 }
@@ -729,12 +722,6 @@ public class MappingEngine implements AutoCloseable {
         @Override
         public MappingConverter getMappingConverter() {
             return engine.mappingConverter;
-        }
-
-        @Override
-        public IAeroMapper asMapper() {
-            throw new UnsupportedOperationException(
-                    "asMapper() is no longer supported. Use MappingSession for CRUD operations.");
         }
 
         @Override

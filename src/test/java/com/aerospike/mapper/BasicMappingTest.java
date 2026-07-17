@@ -43,7 +43,7 @@ public class BasicMappingTest extends MapperBaseTest {
         p.setValid(true);
 
         mapper.save(p);
-        Person person2 = mapper.read(Person.class, p.getSsn());
+        Person person2 = mapper.read(Person.class, p.getSsn()).orElse(null);
         assertEquals(p.toString(), person2.toString());
 
         // Check the column names
@@ -66,7 +66,7 @@ public class BasicMappingTest extends MapperBaseTest {
         p.setValid(true);
 
         mapper.save(p);
-        PersonDifferentNames person2 = mapper.read(PersonDifferentNames.class, p.getSsn());
+        PersonDifferentNames person2 = mapper.read(PersonDifferentNames.class, p.getSsn()).orElse(null);
         assertEquals(p.toString(), person2.toString());
 
         // Check the column names

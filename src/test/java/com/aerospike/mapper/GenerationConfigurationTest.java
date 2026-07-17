@@ -62,7 +62,7 @@ public class GenerationConfigurationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read back the entity
-        ConfigGenerationEntity readEntity = mapper.read(ConfigGenerationEntity.class, 1);
+        ConfigGenerationEntity readEntity = mapper.read(ConfigGenerationEntity.class, 1).orElse(null);
         
         assertNotNull(readEntity);
         assertEquals(1, readEntity.getId());
@@ -88,7 +88,7 @@ public class GenerationConfigurationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read back the entity
-        ConfigGenerationEntity readEntity = mapper.read(ConfigGenerationEntity.class, 2);
+        ConfigGenerationEntity readEntity = mapper.read(ConfigGenerationEntity.class, 2).orElse(null);
         
         assertNotNull(readEntity);
         assertEquals(2, readEntity.getId());
@@ -113,8 +113,8 @@ public class GenerationConfigurationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read the entity to get the current generation
-        ConfigGenerationEntity readEntity1 = mapper.read(ConfigGenerationEntity.class, 3);
-        ConfigGenerationEntity readEntity2 = mapper.read(ConfigGenerationEntity.class, 3);
+        ConfigGenerationEntity readEntity1 = mapper.read(ConfigGenerationEntity.class, 3).orElse(null);
+        ConfigGenerationEntity readEntity2 = mapper.read(ConfigGenerationEntity.class, 3).orElse(null);
         
         // Both should have the same generation
         assertEquals(readEntity1.getGeneration(), readEntity2.getGeneration());
@@ -147,7 +147,7 @@ public class GenerationConfigurationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read and verify initial generation
-        ConfigGenerationEntity readEntity = mapper.read(ConfigGenerationEntity.class, 4);
+        ConfigGenerationEntity readEntity = mapper.read(ConfigGenerationEntity.class, 4).orElse(null);
         assertEquals(1, readEntity.getGeneration());
         
         // Update and save
@@ -155,7 +155,7 @@ public class GenerationConfigurationTest extends MapperBaseTest {
         mapper.save(readEntity);
         
         // Read again and verify generation incremented
-        ConfigGenerationEntity updatedEntity = mapper.read(ConfigGenerationEntity.class, 4);
+        ConfigGenerationEntity updatedEntity = mapper.read(ConfigGenerationEntity.class, 4).orElse(null);
         assertEquals(2, updatedEntity.getGeneration());
         assertEquals("Updated Name", updatedEntity.getName());
     }

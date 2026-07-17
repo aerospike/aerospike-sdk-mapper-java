@@ -58,7 +58,7 @@ public class ComplexClassMappingTest extends MapperBaseTest {
         complex.charFields = Arrays.asList(new Character[]{9, 8, 7, 6, 0, 255, 245, 128, 127});
         mapper.save(complex);
 
-        ComplexClass complex2 = mapper.read(ComplexClass.class, complex.trts);
+        ComplexClass complex2 = mapper.read(ComplexClass.class, complex.trts).orElse(null);
         for (int i = 0; i < complex.charFields.size(); i++) {
             assertEquals(complex.charFields.get(i), complex2.charFields.get(i));
         }

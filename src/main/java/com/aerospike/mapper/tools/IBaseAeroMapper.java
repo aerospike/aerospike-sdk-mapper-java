@@ -7,7 +7,5 @@ public interface IBaseAeroMapper {
 
     MappingConverter getMappingConverter();
 
-    IAeroMapper asMapper();
-
     Session getSession();
 }

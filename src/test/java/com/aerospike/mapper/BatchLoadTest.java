@@ -98,10 +98,10 @@ public class BatchLoadTest extends MapperBaseTest {
     public void testBatchLoad() {
         MappingSession mapper = populate();
 
-        B resultB = mapper.read(B.class, bees[1].id);
+        B resultB = mapper.read(B.class, bees[1].id).orElse(null);
         compare(bees[1], resultB);
 
-        A resultA = mapper.read(A.class, as[1].id);
+        A resultA = mapper.read(A.class, as[1].id).orElse(null);
         compare(as[1], resultA);
 
         Integer[] ids = new Integer[6];
@@ -131,10 +131,10 @@ public class BatchLoadTest extends MapperBaseTest {
     public void testBatchLoadWithOperations() {
         MappingSession mapper = populate();
 
-        B resultB = mapper.read(B.class, bees[1].id);
+        B resultB = mapper.read(B.class, bees[1].id).orElse(null);
         compare(bees[1], resultB);
 
-        A resultA = mapper.read(A.class, as[1].id);
+        A resultA = mapper.read(A.class, as[1].id).orElse(null);
         compare(as[1], resultA);
 
         String ns = mapper.getEngine().getNamespace(A.class);

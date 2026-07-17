@@ -21,12 +21,12 @@ public class MultiOperation<E> extends AbstractMultiOperation<E, MultiOperation<
         }
 
         Operation[] ops = operations.toArray(new Operation[0]);
-        Record record = virtualList.getSession().upsert(virtualList.key)
+        Record operationResult = virtualList.getSession().upsert(virtualList.key)
                 .appendOperations(ops)
                 .execute()
                 .getFirstRecord();
 
         HydrationContext ctx = new HydrationContext(virtualList.getSession());
-        return extractResult(record, ctx);
+        return extractResult(operationResult, ctx);
     }
 }

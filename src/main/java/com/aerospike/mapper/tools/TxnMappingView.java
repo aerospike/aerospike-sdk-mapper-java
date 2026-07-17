@@ -9,6 +9,7 @@ import com.aerospike.mapper.tools.virtuallist.VirtualList;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
@@ -102,22 +103,23 @@ final class TxnMappingView extends MappingSession {
     }
 
     @Override
-    public <T> T read(@NotNull Class<T> clazz, @NotNull Object userKey) {
+    public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey) {
         return getEngine().read(txnSession, clazz, userKey, true);
     }
 
     @Override
-    public <T> T read(@NotNull Class<T> clazz, @NotNull Object userKey, boolean resolveDependencies) {
+    public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey, boolean resolveDependencies) {
         return getEngine().read(txnSession, clazz, userKey, resolveDependencies);
     }
 
     @Override
-    public <T> T readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest) {
+    public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest) {
         return getEngine().readFromDigest(txnSession, clazz, digest, true);
     }
 
     @Override
-    public <T> T readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest, boolean resolveDependencies) {
+    public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest,
+                                          boolean resolveDependencies) {
         return getEngine().readFromDigest(txnSession, clazz, digest, resolveDependencies);
     }
 
@@ -201,10 +203,14 @@ final class TxnMappingView extends MappingSession {
     public <T> CompletableFuture<Void> updateAsync(T object, String... binNames) { throw asyncNotSupported(); }
 
     @Override
-    public <T> CompletableFuture<T> readAsync(Class<T> clazz, Object userKey) { throw asyncNotSupported(); }
+    public <T> CompletableFuture<Optional<T>> readAsync(Class<T> clazz, Object userKey) {
+        throw asyncNotSupported();
+    }
 
     @Override
-    public <T> CompletableFuture<T> readFromDigestAsync(Class<T> clazz, byte[] digest) { throw asyncNotSupported(); }
+    public <T> CompletableFuture<Optional<T>> readFromDigestAsync(Class<T> clazz, byte[] digest) {
+        throw asyncNotSupported();
+    }
 
     @Override
     public <T> CompletableFuture<List<T>> readAsync(Class<T> clazz, Object[] userKeys) { throw asyncNotSupported(); }

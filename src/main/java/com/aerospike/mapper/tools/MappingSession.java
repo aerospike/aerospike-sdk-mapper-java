@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
@@ -26,7 +27,7 @@ import java.util.concurrent.Flow;
  * <pre>{@code
  * MappingSession session = cluster.createSession(behavior, engine.sessionExtension());
  * session.save(myObject);
- * Customer c = session.read(Customer.class, "cust-1");
+ * Optional<Customer> customer = session.read(Customer.class, "cust-1");
  * }</pre>
  *
  * <p>Not {@code final} — the package-private {@code TxnMappingView} extends it
@@ -114,20 +115,20 @@ public class MappingSession extends Session {
         engine.update(this, object, ttl, binNames);
     }
 
-    public <T> T read(@NotNull Class<T> clazz, @NotNull Object userKey) throws AerospikeException {
+    public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey) throws AerospikeException {
         return read(clazz, userKey, true);
     }
 
-    public <T> T read(@NotNull Class<T> clazz, @NotNull Object userKey, boolean resolveDependencies)
+    public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey, boolean resolveDependencies)
             throws AerospikeException {
         return engine.read(this, clazz, userKey, resolveDependencies);
     }
 
-    public <T> T readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest) throws AerospikeException {
+    public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest) throws AerospikeException {
         return readFromDigest(clazz, digest, true);
     }
 
-    public <T> T readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest, boolean resolveDependencies)
+    public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest, boolean resolveDependencies)
             throws AerospikeException {
         return engine.readFromDigest(this, clazz, digest, resolveDependencies);
     }
@@ -220,11 +221,11 @@ public class MappingSession extends Session {
         return engine.writeObjectAsync(this, object, MappingEngine.WriteOp.UPSERT, java.util.OptionalInt.empty(), binNames);
     }
 
-    public <T> CompletableFuture<T> readAsync(@NotNull Class<T> clazz, @NotNull Object userKey) {
+    public <T> CompletableFuture<Optional<T>> readAsync(@NotNull Class<T> clazz, @NotNull Object userKey) {
         return engine.readSingleAsync(this, clazz, userKey);
     }
 
-    public <T> CompletableFuture<T> readFromDigestAsync(@NotNull Class<T> clazz, @NotNull byte[] digest) {
+    public <T> CompletableFuture<Optional<T>> readFromDigestAsync(@NotNull Class<T> clazz, @NotNull byte[] digest) {
         return engine.readFromDigestAsync(this, clazz, digest);
     }
 

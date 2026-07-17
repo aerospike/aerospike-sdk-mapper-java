@@ -197,7 +197,7 @@ public class SubClassHierarchyTest extends MapperBaseTest {
 
         mapper.save(customer);
 
-        Customer customer2 = mapper.read(Customer.class, customer.getCustomerId());
+        Customer customer2 = mapper.read(Customer.class, customer.getCustomerId()).orElse(null);
 
         assertNotNull(customer2);
         assertEquals("cust1", customer2.getCustomerId());

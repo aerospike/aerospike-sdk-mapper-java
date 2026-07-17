@@ -52,7 +52,7 @@ public class UsePKColumnInsteadOfBinForKeyTest extends MapperBaseTest {
         A a = new A(1, "test");
         mapper.save(a);
 
-        A readA = mapper.read(A.class, 1);
+        A readA = mapper.read(A.class, 1).orElse(null);
         assertEquals(1, readA.key1);
 
         Record rawObject = readRawRecord(mapper.getEngine().getRecordKey(a));
@@ -74,7 +74,7 @@ public class UsePKColumnInsteadOfBinForKeyTest extends MapperBaseTest {
         B b = new B("key1", "test1");
         mapper.save(b);
 
-        B readB = mapper.read(B.class, "key1");
+        B readB = mapper.read(B.class, "key1").orElse(null);
         assertEquals("key1", readB.keyStr);
 
         Record rawObject = readRawRecord(mapper.getEngine().getRecordKey(b));
@@ -94,7 +94,7 @@ public class UsePKColumnInsteadOfBinForKeyTest extends MapperBaseTest {
         B b = new B("key2", "test2");
         mapper.save(b);
 
-        B readB = mapper.read(B.class, "key2");
+        B readB = mapper.read(B.class, "key2").orElse(null);
         assertEquals("key2", readB.keyStr);
 
         Record rawObject = readRawRecord(mapper.getEngine().getRecordKey(b));

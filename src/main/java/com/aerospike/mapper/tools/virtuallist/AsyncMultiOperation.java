@@ -32,11 +32,11 @@ public class AsyncMultiOperation<E> extends AbstractMultiOperation<E, AsyncMulti
                     if (results == null || results.isEmpty()) {
                         return null;
                     }
-                    Record record = results.get(0).recordOrNull();
+                    Record operationResult = results.get(0).recordOrNull();
                     HydrationContext ctx = new HydrationContext(virtualList.getSession());
                     ctx.pushKey(virtualList.key);
                     try {
-                        return extractResult(record, ctx);
+                        return extractResult(operationResult, ctx);
                     } finally {
                         ctx.popKey();
                     }

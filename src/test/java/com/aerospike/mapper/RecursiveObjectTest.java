@@ -45,7 +45,7 @@ public class RecursiveObjectTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
         mapper.save(a1);
 
-        A a2 = mapper.read(A.class, a1.id);
+        A a2 = mapper.read(A.class, a1.id).orElse(null);
         assertEquals(a1.age, a2.age);
         assertEquals(a1.name, a2.name);
         assertEquals(a1.id, a2.id);
@@ -62,7 +62,7 @@ public class RecursiveObjectTest extends MapperBaseTest {
         mapper.save(a1);
         mapper.save(b);
 
-        B b2 = mapper.read(B.class, b.id);
+        B b2 = mapper.read(B.class, b.id).orElse(null);
         assertEquals(b.id, b2.id);
         assertEquals(b.a.age, b2.a.age);
         assertEquals(b.a.name, b2.a.name);
@@ -77,7 +77,7 @@ public class RecursiveObjectTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
         mapper.save(a1, a1.a);
 
-        A a2 = mapper.read(A.class, a1.id);
+        A a2 = mapper.read(A.class, a1.id).orElse(null);
         assertEquals(a1.age, a2.age);
         assertEquals(a1.name, a2.name);
         assertEquals(a1.id, a2.id);

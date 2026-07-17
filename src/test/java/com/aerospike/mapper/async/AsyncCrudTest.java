@@ -35,7 +35,7 @@ public class AsyncCrudTest extends AsyncBaseTest {
         Item item = new Item(1, "widget");
         mapper.saveAsync(item).get();
 
-        Item read = mapper.readAsync(Item.class, 1).get();
+        Item read = mapper.readAsync(Item.class, 1).get().orElse(null);
         assertNotNull(read);
         assertEquals("widget", read.name);
     }
@@ -50,8 +50,7 @@ public class AsyncCrudTest extends AsyncBaseTest {
         Boolean existed = mapper.deleteAsync(Item.class, 2).get();
         assertTrue(existed);
 
-        Item gone = mapper.readAsync(Item.class, 2).get();
-        assertNull(gone);
+        assertTrue(mapper.readAsync(Item.class, 2).get().isEmpty());
     }
 
     @Test
@@ -65,7 +64,7 @@ public class AsyncCrudTest extends AsyncBaseTest {
         Boolean existed = mapper.deleteAsync(item).get();
         assertTrue(existed);
 
-        assertNull(mapper.read(Item.class, 3));
+        assertTrue(mapper.read(Item.class, 3).isEmpty());
     }
 
     @Test
@@ -82,11 +81,10 @@ public class AsyncCrudTest extends AsyncBaseTest {
     }
 
     @Test
-    void readAsyncMissingKeyReturnsNull() throws Exception {
+    void readAsyncMissingKeyReturnsOptionalEmpty() throws Exception {
         MappingSession mapper = createMapper();
 
-        Item result = mapper.readAsync(Item.class, 99999).get();
-        assertNull(result);
+        assertTrue(mapper.readAsync(Item.class, 99999).get().isEmpty());
     }
 
     @Test
@@ -98,7 +96,7 @@ public class AsyncCrudTest extends AsyncBaseTest {
         Item updated = new Item(20, "after");
         mapper.updateAsync(updated).get();
 
-        Item read = mapper.read(Item.class, 20);
+        Item read = mapper.read(Item.class, 20).orElse(null);
         assertNotNull(read);
         assertEquals("after", read.name);
     }
@@ -112,7 +110,7 @@ public class AsyncCrudTest extends AsyncBaseTest {
         mapper.save(item);
 
         byte[] digest = mapper.getEngine().getRecordKey(item).digest;
-        Item read = mapper.readFromDigestAsync(Item.class, digest).get();
+        Item read = mapper.readFromDigestAsync(Item.class, digest).get().orElse(null);
         assertNotNull(read);
         assertEquals("digest-test", read.name);
     }

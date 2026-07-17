@@ -71,7 +71,7 @@ public class SubclassListTest extends MapperBaseTest {
 //		mapper.save(container.account);
         mapper.save(container);
 
-        Container object = mapper.read(Container.class, 1);
+        Container object = mapper.read(Container.class, 1).orElse(null);
         assertEquals(container.id, object.id);
         assertEquals(container.account.id, object.account.id);
         assertEquals(container.account.name, object.account.name);

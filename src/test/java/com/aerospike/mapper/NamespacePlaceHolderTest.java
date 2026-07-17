@@ -35,7 +35,7 @@ public class NamespacePlaceHolderTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
         mapper.save(placeHolderModel1);
 
-        PlaceHolderModel placeHolderModelRead = mapper.read(PlaceHolderModel.class, placeHolderModel1.id);
+        PlaceHolderModel placeHolderModelRead = mapper.read(PlaceHolderModel.class, placeHolderModel1.id).orElse(null);
         assertEquals(placeHolderModel1.email, placeHolderModelRead.email);
     }
 

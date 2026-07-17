@@ -63,7 +63,7 @@ public class ListOfReferencesTest extends MapperBaseTest {
             mapper.save(container.items.get(i));
         }
 
-        Container newVersion = mapper.read(Container.class, 1);
+        Container newVersion = mapper.read(Container.class, 1).orElse(null);
         assertEquals(container.id, newVersion.id);
         assertEquals(container.name, newVersion.name);
         assertEquals(container.items.size(), newVersion.items.size());

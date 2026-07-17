@@ -231,7 +231,7 @@ public class VirtualListWithKeyConstructorTest extends MapperBaseTest {
         assertEquals(103, results.get(2).id);
         assertEquals(104, results.get(3).id);
 
-        A result = mapper.read(A.class, collection.id);
+        A result = mapper.read(A.class, collection.id).orElse(null);
         assertEquals(collection.id, result.id);
         assertEquals(7, result.elements.size());
 

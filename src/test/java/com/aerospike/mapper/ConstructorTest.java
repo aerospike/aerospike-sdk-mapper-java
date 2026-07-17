@@ -58,7 +58,7 @@ public class ConstructorTest extends MapperBaseTest {
         ConstructedClass data = new ConstructedClass(1, 19, "jane", new Date());
         MappingSession mapper = createMapper();
         mapper.save(data);
-        ConstructedClass data2 = mapper.read(ConstructedClass.class, 1);
+        ConstructedClass data2 = mapper.read(ConstructedClass.class, 1).orElse(null);
         assertEquals(data.id, data2.id);
         assertEquals(data.age, data2.age);
         assertEquals(data.name, data2.name);
@@ -94,7 +94,7 @@ public class ConstructorTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper();
         mapper.save(data);
-        ConstructedClass2 data2 = mapper.read(ConstructedClass2.class, 1);
+        ConstructedClass2 data2 = mapper.read(ConstructedClass2.class, 1).orElse(null);
         assertEquals(data.id, data2.id);
         assertEquals(data.a, data2.a);
         assertEquals(data.b, data2.b);
@@ -106,7 +106,7 @@ public class ConstructorTest extends MapperBaseTest {
         NoArgConstructorClass data = new NoArgConstructorClass(12, "tim");
         MappingSession mapper = createMapper();
         mapper.save(data);
-        NoArgConstructorClass data2 = mapper.read(NoArgConstructorClass.class, data.id);
+        NoArgConstructorClass data2 = mapper.read(NoArgConstructorClass.class, data.id).orElse(null);
         assertEquals(data.id, data2.id);
         assertEquals(data.name, data2.name);
     }
@@ -148,7 +148,7 @@ public class ConstructorTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper();
         mapper.save(ccc);
-        ConstructorContainerClass ccc2 = mapper.read(ConstructorContainerClass.class, 1);
+        ConstructorContainerClass ccc2 = mapper.read(ConstructorContainerClass.class, 1).orElse(null);
         assertEquals(ccc.id, ccc2.id);
         assertEquals(ccc.list.size(), ccc2.list.size());
         assertEquals(ccc.list.get(0).id, ccc2.list.get(0).id);

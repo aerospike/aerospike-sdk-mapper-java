@@ -239,8 +239,8 @@ public abstract class AbstractMultiOperation<E, S extends AbstractMultiOperation
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> T extractResult(Record record, HydrationContext ctx) {
-        if (record == null) {
+    protected <T> T extractResult(Record operationResult, HydrationContext ctx) {
+        if (operationResult == null) {
             return null;
         }
 
@@ -248,9 +248,9 @@ public abstract class AbstractMultiOperation<E, S extends AbstractMultiOperation
         Object rawResult;
 
         if (operations.size() == 1) {
-            rawResult = record.getValue(virtualList.binName);
+            rawResult = operationResult.getValue(virtualList.binName);
         } else {
-            rawResult = record.operationResult(idx).getValue();
+            rawResult = operationResult.operationResult(idx).getValue();
         }
 
         T result = (T) virtualList.unpackListResult(rawResult, ctx);

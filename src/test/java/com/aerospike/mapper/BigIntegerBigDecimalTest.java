@@ -32,7 +32,7 @@ public class BigIntegerBigDecimalTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
         BigTypes types = new BigTypes(1, "test", new BigDecimal("123456789.123456789"), new BigInteger("12345678901234567890"));
         mapper.save(types);
-        BigTypes readTypes = mapper.read(BigTypes.class, 1);
+        BigTypes readTypes = mapper.read(BigTypes.class, 1).orElse(null);
         assertEquals(types, readTypes);
     }
 }

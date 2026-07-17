@@ -42,7 +42,7 @@ public class DefaultFieldValuesTest extends MapperBaseTest {
         obj.key = "dfc";
         mapper.save(obj);
 
-        DefaultFieldsClass dfc = mapper.read(DefaultFieldsClass.class, "dfc");
+        DefaultFieldsClass dfc = mapper.read(DefaultFieldsClass.class, "dfc").orElse(null);
         assertNull(dfc.i);
         assertEquals(0, dfc.i2);
         assertNull(dfc.l);
@@ -75,7 +75,7 @@ public class DefaultFieldValuesTest extends MapperBaseTest {
         Record record = readRawRecord(key);
         assertInstanceOf(Long.class, record.bins.get("bool2"));
         assertEquals(0, record.getLong("bool2"));
-        DefaultFieldsClass dfc = mapper.read(DefaultFieldsClass.class, "dfc");
+        DefaultFieldsClass dfc = mapper.read(DefaultFieldsClass.class, "dfc").orElse(null);
         assertFalse(dfc.bool2);
 
         UseBoolBin = true;
@@ -83,7 +83,7 @@ public class DefaultFieldValuesTest extends MapperBaseTest {
         record = readRawRecord(key);
         assertInstanceOf(Boolean.class, record.bins.get("bool2"));
         assertFalse(record.getBoolean("bool2"));
-        dfc = mapper.read(DefaultFieldsClass.class, "dfc");
+        dfc = mapper.read(DefaultFieldsClass.class, "dfc").orElse(null);
         assertFalse(dfc.bool2);
     }
 }

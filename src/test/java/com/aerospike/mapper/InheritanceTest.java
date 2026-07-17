@@ -65,7 +65,7 @@ public class InheritanceTest extends MapperBaseTest {
         a.dAsAb = d;
 
         mapper.save(a, b, c, d);
-        A a2 = mapper.read(A.class, a.id);
+        A a2 = mapper.read(A.class, a.id).orElse(null);
         compare(a, a2);
     }
 }

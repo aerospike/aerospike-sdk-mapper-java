@@ -39,7 +39,7 @@ public class MappingSessionTransactionTest extends MapperBaseTest {
             txn.save(new TxnEntity(1, "Alice"));
         });
 
-        TxnEntity result = mapper.read(TxnEntity.class, 1);
+        TxnEntity result = mapper.read(TxnEntity.class, 1).orElse(null);
         assertNotNull(result);
         assertEquals("Alice", result.name);
     }
@@ -56,7 +56,7 @@ public class MappingSessionTransactionTest extends MapperBaseTest {
                     throw new RuntimeException("force rollback");
                 }));
 
-        TxnEntity result = mapper.read(TxnEntity.class, 2);
+        TxnEntity result = mapper.read(TxnEntity.class, 2).orElse(null);
         assertNull(result);
     }
 
@@ -68,7 +68,7 @@ public class MappingSessionTransactionTest extends MapperBaseTest {
         mapper.save(new TxnEntity(3, "Charlie"));
 
         TxnEntity result = mapper.doInMappingTransactionReturning(txn ->
-                txn.read(TxnEntity.class, 3));
+                txn.read(TxnEntity.class, 3).orElse(null));
 
         assertNotNull(result);
         assertEquals("Charlie", result.name);
@@ -105,13 +105,13 @@ public class MappingSessionTransactionTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
 
         mapper.save(new TxnEntity(10, "to-delete"));
-        assertNotNull(mapper.read(TxnEntity.class, 10));
+        assertTrue(mapper.read(TxnEntity.class, 10).isPresent());
 
         mapper.doInMappingTransaction(txn -> {
             txn.delete(TxnEntity.class, 10);
         });
 
-        assertNull(mapper.read(TxnEntity.class, 10));
+        assertTrue(mapper.read(TxnEntity.class, 10).isEmpty());
     }
 
     @AerospikeRecord(namespace = "test", set = "txnQueryTest")

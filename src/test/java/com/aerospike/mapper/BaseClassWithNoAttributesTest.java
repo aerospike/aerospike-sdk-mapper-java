@@ -127,7 +127,7 @@ public class BaseClassWithNoAttributesTest extends MapperBaseTest {
         zoo.setAnimalsList(listOfAnimals);
         mapper.save(zoo);
 
-        Zoo readZoo = mapper.read(Zoo.class, "103");
+        Zoo readZoo = mapper.read(Zoo.class, "103").orElse(null);
         assertEquals(zoo.zooId, readZoo.zooId);
         assertEquals(zoo, readZoo);
     }

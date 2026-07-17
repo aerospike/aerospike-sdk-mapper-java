@@ -75,7 +75,7 @@ public class FactoryConstructorTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper();
         mapper.save(a1);
-        A a2 = mapper.read(A.class, a1.id);
+        A a2 = mapper.read(A.class, a1.id).orElse(null);
 
         assertEquals(a1.age, a2.age);
         assertEquals(a1.name, a2.name);
@@ -96,7 +96,7 @@ public class FactoryConstructorTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         mapper.save(a1);
-        A a2 = mapper.read(A.class, a1.id);
+        A a2 = mapper.read(A.class, a1.id).orElse(null);
 
         assertEquals(a1.age, a2.age);
         assertEquals(a1.name, a2.name);
@@ -118,7 +118,7 @@ public class FactoryConstructorTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         mapper.save(a1);
-        A a2 = mapper.read(A.class, a1.id);
+        A a2 = mapper.read(A.class, a1.id).orElse(null);
 
         assertEquals(a1.age, a2.age);
         assertEquals(a1.name, a2.name);
@@ -140,7 +140,7 @@ public class FactoryConstructorTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(yaml));
         mapper.save(a1);
-        A a2 = mapper.read(A.class, a1.id);
+        A a2 = mapper.read(A.class, a1.id).orElse(null);
 
         assertEquals(a1.age, a2.age);
         assertEquals(a1.name, a2.name);

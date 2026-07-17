@@ -40,7 +40,7 @@ public class AnonymousReferencesTest extends MapperBaseTest {
         a.nonB.add(nonB);
 
         mapper.save(a);
-        A a2 = mapper.read(A.class, a.id);
+        A a2 = mapper.read(A.class, a.id).orElse(null);
         assertEquals(a.id, a2.id);
         assertEquals(a.unnamedB.size(), a2.unnamedB.size());
         assertEquals(((B) a.unnamedB.get(0)).id, ((B) a2.unnamedB.get(0)).id);

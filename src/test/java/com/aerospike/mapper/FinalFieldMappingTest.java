@@ -27,8 +27,8 @@ public class FinalFieldMappingTest extends MapperBaseTest {
         doc.data = "This is some data";
 
         mapper.save(customer, doc);
-        Customer readCustomer = mapper.read(Customer.class, customer.getKey());
-        Doc readDoc = mapper.read(Doc.class, doc.getKey());
+        Customer readCustomer = mapper.read(Customer.class, customer.getKey()).orElse(null);
+        Doc readDoc = mapper.read(Doc.class, doc.getKey()).orElse(null);
         assertEquals(doc.toString(), readDoc.toString());
 
         ReferencingClass ref = new ReferencingClass();
@@ -36,7 +36,7 @@ public class FinalFieldMappingTest extends MapperBaseTest {
         ref.cust = readCustomer;
         ref.doc = doc;
         mapper.save(ref);
-        ReferencingClass readRef = mapper.read(ReferencingClass.class, ref.id);
+        ReferencingClass readRef = mapper.read(ReferencingClass.class, ref.id).orElse(null);
         assertEquals(ref.toString(), readRef.toString());
     }
 

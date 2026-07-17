@@ -24,7 +24,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 0;
         annotatedClass.bytes = new byte[]{1, 2, 3, 4, 5};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         byte[] bytes = (byte[]) record.getValue("bytes");
 
@@ -53,7 +53,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 1;
         unAnnotatedClass.bytes = new byte[]{1, 2, 3, 4, 5};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         byte[] bytes = (byte[]) record.getValue("bytes");
 
@@ -72,7 +72,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 2;
         annotatedClass.shorts = new short[]{1, 2, 3, 4, 5};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Long> shorts = (List<Long>) record.getList("shorts");
@@ -102,7 +102,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 3;
         unAnnotatedClass.shorts = new short[]{1, 2, 3, 4, 5};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Long> shorts = (List<Long>) record.getList("shorts");
@@ -122,7 +122,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 4;
         annotatedClass.ints = new int[]{1, 2, 3, 4, 5};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Long> ints = (List<Long>) record.getList("ints");
@@ -152,7 +152,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 5;
         unAnnotatedClass.ints = new int[]{1, 2, 3, 4, 5};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Long> ints = (List<Long>) record.getList("ints");
@@ -172,7 +172,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 6;
         annotatedClass.longs = new long[]{1, 2, 3, 4, 5};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Long> longs = (List<Long>) record.getList("longs");
@@ -202,7 +202,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 7;
         unAnnotatedClass.longs = new long[]{1, 2, 3, 4, 5};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Long> longs = (List<Long>) record.getList("longs");
@@ -222,7 +222,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 8;
         annotatedClass.floats = new float[]{1, 2, 3, 4, 5};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Double> floats = (List<Double>) record.getList("floats");
@@ -252,7 +252,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 9;
         unAnnotatedClass.floats = new float[]{1, 2, 3, 4, 5};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Double> floats = (List<Double>) record.getList("floats");
@@ -272,7 +272,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 10;
         annotatedClass.doubles = new double[]{1, 2, 3, 4, 5};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Double> doubles = (List<Double>) record.getList("doubles");
@@ -302,7 +302,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 11;
         unAnnotatedClass.doubles = new double[]{1, 2, 3, 4, 5};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         @SuppressWarnings("unchecked")
         List<Double> doubles = (List<Double>) record.getList("doubles");
@@ -322,7 +322,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         annotatedClass.key = 12;
         annotatedClass.strings = new String[]{"the", "quick", "brown", "fox"};
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", annotatedClass.key));
         @SuppressWarnings("unchecked")
         List<String> strings = (List<String>) record.getList("strings");
@@ -352,7 +352,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
         unAnnotatedClass.key = 13;
         unAnnotatedClass.strings = new String[]{"the", "quick", "brown", "fox"};
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
         Record record = readRawRecord(new Key("test", "testSet", unAnnotatedClass.key));
         @SuppressWarnings("unchecked")
         List<String> strings = (List<String>) record.getList("strings");
@@ -376,7 +376,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
                 new ChildClass(2, "b", 4), new ChildClass(3, "c", 6)
         };
         mapper.save(annotatedClass);
-        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key);
+        AnnotatedClass class2 = mapper.read(AnnotatedClass.class, annotatedClass.key).orElse(null);
 
         assertEquals(annotatedClass.children.length, class2.children.length);
         for (int i = 0; i < annotatedClass.children.length; i++) {
@@ -415,7 +415,7 @@ public class EmbeddedArrayTest extends MapperBaseTest {
                 new UnAnnotatedChildClass(3, "c", 6)
         };
         mapper.save(unAnnotatedClass);
-        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key);
+        UnAnnotatedClass class2 = mapper.read(UnAnnotatedClass.class, unAnnotatedClass.key).orElse(null);
 
         assertEquals(unAnnotatedClass.children.length, class2.children.length);
         for (int i = 0; i < unAnnotatedClass.children.length; i++) {

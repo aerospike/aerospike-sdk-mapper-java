@@ -95,7 +95,7 @@ public class Application extends ApplicationBase {
         Customer readCustomer = null;
         for (int i = 0; i < 100; i++) {
             long now = System.nanoTime();
-            readCustomer = mapper.read(Customer.class, customer.getCustomerId());
+            readCustomer = mapper.read(Customer.class, customer.getCustomerId()).orElse(null);
             System.out.printf("Customer graph read time: %.3fms%n", (System.nanoTime() - now) / 1000000f);
         }
         ObjectWriter objectWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();

@@ -93,10 +93,21 @@ public class ObjectReferenceMapper extends ObjectMapper {
             return new DeferredObject(reference.key, reference.classToUse.getUnderlyingClass(),
                     ReferenceType.DIGEST.equals(type));
         } else if (ReferenceType.DIGEST.equals(type)) {
-            return mapper.asMapper().readFromDigest(reference.classToUse.getUnderlyingClass(),
-                    (byte[]) reference.key, false);
+            if (engine == null) {
+                throw new IllegalStateException(
+                        "ObjectReferenceMapper requires a MappingEngine; the legacy IAeroMapper path was removed");
+            }
+            return engine.readFromDigestWithContext(
+                    new HydrationContext(mapper.getSession()),
+                    reference.classToUse.getUnderlyingClass(), (byte[]) reference.key, false).orElse(null);
         } else {
-            return mapper.asMapper().read(reference.classToUse.getUnderlyingClass(), reference.key, false);
+            if (engine == null) {
+                throw new IllegalStateException(
+                        "ObjectReferenceMapper requires a MappingEngine; the legacy IAeroMapper path was removed");
+            }
+            return engine.readWithContext(
+                    new HydrationContext(mapper.getSession()),
+                    reference.classToUse.getUnderlyingClass(), reference.key, false).orElse(null);
         }
     }
 
@@ -127,10 +138,10 @@ public class ObjectReferenceMapper extends ObjectMapper {
             }
             if (ReferenceType.DIGEST.equals(type)) {
                 return resolvedEngine.readFromDigestWithContext(
-                        ctx, reference.classToUse.getUnderlyingClass(), (byte[]) reference.key, false);
+                        ctx, reference.classToUse.getUnderlyingClass(), (byte[]) reference.key, false).orElse(null);
             } else {
                 return resolvedEngine.readWithContext(
-                        ctx, reference.classToUse.getUnderlyingClass(), reference.key, false);
+                        ctx, reference.classToUse.getUnderlyingClass(), reference.key, false).orElse(null);
             }
         }
     }

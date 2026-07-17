@@ -66,7 +66,7 @@ public class PreloadingMethodsTest extends MapperBaseTest {
 
         Zoo zoo = createAnimalList();
         mapper.save(zoo);
-        Zoo readZoo = mapper.read(Zoo.class, "103");
+        Zoo readZoo = mapper.read(Zoo.class, "103").orElse(null);
         assertEquals(zoo, readZoo);
     }
 
@@ -97,7 +97,7 @@ public class PreloadingMethodsTest extends MapperBaseTest {
 
         mapper = createMapper(MappingEngine.builder().preLoadClass(Cat.class).preLoadClass(Dog.class));
 
-        Zoo readZoo = mapper.read(Zoo.class, "103");
+        Zoo readZoo = mapper.read(Zoo.class, "103").orElse(null);
         assertEquals(zoo, readZoo);
     }
 
@@ -111,7 +111,7 @@ public class PreloadingMethodsTest extends MapperBaseTest {
 
         mapper = createMapper(MappingEngine.builder().preLoadClasses(Cat.class, Dog.class));
 
-        Zoo readZoo = mapper.read(Zoo.class, "103");
+        Zoo readZoo = mapper.read(Zoo.class, "103").orElse(null);
         assertEquals(zoo, readZoo);
     }
 
@@ -125,7 +125,7 @@ public class PreloadingMethodsTest extends MapperBaseTest {
 
         mapper = createMapper(MappingEngine.builder().preLoadClassesFromPackage(Cat.class));
 
-        Zoo readZoo = mapper.read(Zoo.class, "103");
+        Zoo readZoo = mapper.read(Zoo.class, "103").orElse(null);
         assertEquals(zoo, readZoo);
     }
 }

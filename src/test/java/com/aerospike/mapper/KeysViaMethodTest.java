@@ -62,7 +62,7 @@ public class KeysViaMethodTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper();
         mapper.save(container);
-        Container container2 = mapper.read(Container.class, 1);
+        Container container2 = mapper.read(Container.class, 1).orElse(null);
         assertEquals(7, container2.basicList.get(0).id);
         assertEquals("tim", container2.basicList.get(0).name);
     }
@@ -137,7 +137,7 @@ public class KeysViaMethodTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
         mapper.save(account);
 
-        AccountTxnContainer result = mapper.read(AccountTxnContainer.class, "Tim-1");
+        AccountTxnContainer result = mapper.read(AccountTxnContainer.class, "Tim-1").orElse(null);
         assertEquals(account.txnList.size(), result.txnList.size());
         for (int i = 0; i < account.txnList.size(); i++) {
             assertEquals(account.txnList.get(i).amount, result.txnList.get(i).amount);

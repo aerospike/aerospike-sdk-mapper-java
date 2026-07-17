@@ -23,10 +23,10 @@ public class EnumMappingTest extends MapperBaseTest {
         mapper.save(a3);
         mapper.save(a4);
 
-        A a11 = mapper.read(A.class, 1);
-        A a12 = mapper.read(A.class, 2);
-        A a13 = mapper.read(A.class, 3);
-        A a14 = mapper.read(A.class, 4);
+        A a11 = mapper.read(A.class, 1).orElse(null);
+        A a12 = mapper.read(A.class, 2).orElse(null);
+        A a13 = mapper.read(A.class, 3).orElse(null);
+        A a14 = mapper.read(A.class, 4).orElse(null);
 
         assertEquals(a1.id, a11.id);
         assertEquals(a1.status, a11.status);

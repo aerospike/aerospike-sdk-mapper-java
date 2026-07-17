@@ -25,7 +25,7 @@ public class EmbeddedClassTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
 
         mapper.save(record);
-        Embed1 read = mapper.read(Embed1.class, record.getId());
+        Embed1 read = mapper.read(Embed1.class, record.getId()).orElse(null);
         assertEquals(record, read);
     }
 
@@ -35,7 +35,7 @@ public class EmbeddedClassTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
 
         mapper.save(derived);
-        Derived read = mapper.read(Derived.class, derived.getStr());
+        Derived read = mapper.read(Derived.class, derived.getStr()).orElse(null);
         assertEquals(derived, read);
     }
 

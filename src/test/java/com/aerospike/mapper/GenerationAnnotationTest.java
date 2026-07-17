@@ -136,7 +136,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read back the entity
-        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 1);
+        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 1).orElse(null);
         
         assertNotNull(readEntity);
         assertEquals(1, readEntity.getId());
@@ -155,7 +155,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read back the entity
-        GenerationEntityWithInteger readEntity = mapper.read(GenerationEntityWithInteger.class, 2);
+        GenerationEntityWithInteger readEntity = mapper.read(GenerationEntityWithInteger.class, 2).orElse(null);
         
         assertNotNull(readEntity);
         assertEquals(2, readEntity.getId());
@@ -175,7 +175,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read back the entity
-        GenerationEntityWithMethods readEntity = mapper.read(GenerationEntityWithMethods.class, 3);
+        GenerationEntityWithMethods readEntity = mapper.read(GenerationEntityWithMethods.class, 3).orElse(null);
         
         assertNotNull(readEntity);
         assertEquals(3, readEntity.getId());
@@ -195,8 +195,8 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         mapper.save(entity);
         
         // Read the entity to get the current generation
-        GenerationEntity readEntity1 = mapper.read(GenerationEntity.class, 4);
-        GenerationEntity readEntity2 = mapper.read(GenerationEntity.class, 4);
+        GenerationEntity readEntity1 = mapper.read(GenerationEntity.class, 4).orElse(null);
+        GenerationEntity readEntity2 = mapper.read(GenerationEntity.class, 4).orElse(null);
         
         // Both should have the same generation
         assertEquals(readEntity1.getGeneration(), readEntity2.getGeneration());
@@ -224,7 +224,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         mapper.insert(entity);
         
         // Read and verify initial generation
-        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 5);
+        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 5).orElse(null);
         assertEquals(1, readEntity.getGeneration());
         
         // Update and save
@@ -232,7 +232,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         mapper.save(readEntity);
         
         // Read again and verify generation incremented
-        GenerationEntity updatedEntity = mapper.read(GenerationEntity.class, 5);
+        GenerationEntity updatedEntity = mapper.read(GenerationEntity.class, 5).orElse(null);
         assertEquals(2, updatedEntity.getGeneration());
         assertEquals("Updated Name", updatedEntity.getName());
     }
@@ -272,7 +272,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         GenerationEntity entity = new GenerationEntity(8, "Config Test");
         mapper.save(entity);
         
-        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 8);
+        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 8).orElse(null);
         assertEquals(1, readEntity.getGeneration());
     }
 
@@ -290,7 +290,7 @@ public class GenerationAnnotationTest extends MapperBaseTest {
         // This should work fine as no generation policy is set
         mapper.save(entity);
         
-        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 10);
+        GenerationEntity readEntity = mapper.read(GenerationEntity.class, 10).orElse(null);
         assertEquals(1, readEntity.getGeneration()); // Should be 1 after save
     }
 }

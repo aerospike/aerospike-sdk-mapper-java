@@ -58,7 +58,7 @@ public class DateCustomConverterTest extends MapperBaseTest {
         container.date = date;
 
         convertingMapper.save(container);
-        DateContainer container2 = convertingMapper.read(DateContainer.class, container.key);
+        DateContainer container2 = convertingMapper.read(DateContainer.class, container.key).orElse(null);
         compare(container, container2, true);
 
         Record record = readRawRecord(new Key("test", "dateFormat", 1));

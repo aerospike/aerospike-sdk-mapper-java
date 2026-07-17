@@ -110,7 +110,7 @@ public class ConfigurationThroughCodeTest extends MapperBaseTest {
         
         mapper.save(a);
             
-        A readA = mapper.read(A.class, 1);
+        A readA = mapper.read(A.class, 1).orElse(null);
         Assertions.assertEquals(a, readA);
     }
 }

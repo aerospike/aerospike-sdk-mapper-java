@@ -155,7 +155,8 @@ public abstract class ValueType {
                         final Key key = ctx.currentKey();
                         if (key == null) {
                             throw new AerospikeException(String.format(
-                                    "No current key in HydrationContext for KEY-type setter %s on %s", property, obj.getClass().getSimpleName()));
+                                    "Could not set property %s from the record key on %s because no current key was available while hydrating the object. Was this record written with sendKey = true?",
+                                    property, obj.getClass().getSimpleName()));
                         }
                         if (value instanceof DeferredObject) {
                             DeferredSetter setter = resolved -> {

@@ -45,7 +45,7 @@ public class BooleanTest extends MapperBaseTest {
         MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
         mapper.save(b);
 
-        B b2 = mapper.read(B.class, 1);
+        B b2 = mapper.read(B.class, 1).orElse(null);
 
         assertEquals(b.id, b2.id);
         assertEquals(b.boolValue, b2.boolValue);
@@ -74,7 +74,7 @@ public class BooleanTest extends MapperBaseTest {
         MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
         mapper.save(b);
 
-        B b2 = mapper.read(B.class, 1);
+        B b2 = mapper.read(B.class, 1).orElse(null);
 
         assertEquals(b.id, b2.id);
         assertEquals(b.boolValue, b2.boolValue);
@@ -100,7 +100,7 @@ public class BooleanTest extends MapperBaseTest {
         MappingSession mapper = createMapper(MappingEngine.builder().withConfiguration(config));
         mapper.save(b);
 
-        B b2 = mapper.read(B.class, 1);
+        B b2 = mapper.read(B.class, 1).orElse(null);
 
         assertEquals(b.id, b2.id);
         assertEquals(b.boolValue, b2.boolValue);

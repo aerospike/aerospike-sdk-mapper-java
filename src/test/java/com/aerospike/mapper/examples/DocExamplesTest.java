@@ -52,7 +52,7 @@ public class DocExamplesTest extends MapperBaseTest {
 
         mapper.save(account);
 
-        Account readAccount = mapper.read(Account.class, 123L);
+        Account readAccount = mapper.read(Account.class, 123L).orElse(null);
         assertNotNull(readAccount);
         assertEquals("Test Account", readAccount.title);
         assertEquals(111, readAccount.balance);
@@ -126,7 +126,7 @@ public class DocExamplesTest extends MapperBaseTest {
         mapper.save(account);
         mapper.save(person);
 
-        Person loadedPerson = mapper.read(Person.class, "123-456-7890");
+        Person loadedPerson = mapper.read(Person.class, "123-456-7890").orElse(null);
         assertNotNull(loadedPerson);
         assertEquals("123-456-7890", loadedPerson.ssn);
         assertEquals("John", loadedPerson.firstName);
@@ -180,7 +180,7 @@ public class DocExamplesTest extends MapperBaseTest {
         mapper2.container = container;
         mapper.save(mapper2);
 
-        IntMapperV2 v2 = mapper.read(IntMapperV2.class, 1);
+        IntMapperV2 v2 = mapper.read(IntMapperV2.class, 1).orElse(null);
         assertNotNull(v2);
         assertEquals(2, v2.container.b);
         assertEquals(3, v2.container.c);
@@ -194,7 +194,7 @@ public class DocExamplesTest extends MapperBaseTest {
         mapperV2.container = containerV2;
         mapper.save(mapperV2);
 
-        IntMapperV2 readV2 = mapper.read(IntMapperV2.class, 2);
+        IntMapperV2 readV2 = mapper.read(IntMapperV2.class, 2).orElse(null);
         assertNotNull(readV2);
         assertEquals(2, readV2.container.b);
         assertEquals(3, readV2.container.c);
@@ -259,7 +259,7 @@ public class DocExamplesTest extends MapperBaseTest {
 
         mapper.save(account);
 
-        Accounts readAccount = mapper.read(Accounts.class, 1);
+        Accounts readAccount = mapper.read(Accounts.class, 1).orElse(null);
         assertNotNull(readAccount);
         assertEquals("Savings Account", readAccount.name);
         assertEquals(AccountType.SAVINGS, readAccount.type);
@@ -345,7 +345,7 @@ public class DocExamplesTest extends MapperBaseTest {
 
         mapper.save(child);
 
-        Parent readParent = mapper.read(Parent.class, 10);
+        Parent readParent = mapper.read(Parent.class, 10).orElse(null);
         assertNotNull(readParent);
         assertEquals("parent", readParent.name);
         assertNotNull(readParent.mapEmbedChild);

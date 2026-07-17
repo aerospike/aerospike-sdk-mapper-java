@@ -59,7 +59,7 @@ public class YamlConfigurationTest extends MapperBaseTest {
         mapper.save(container.dataClasses.get(0));
         mapper.save(container.dataClasses.get(1));
 
-        ContainerClass container2 = mapper.read(ContainerClass.class, container.id);
+        ContainerClass container2 = mapper.read(ContainerClass.class, container.id).orElse(null);
         assertEquals(container, container2);
     }
 

@@ -76,7 +76,7 @@ public class ArrayTest extends MapperBaseTest {
         mapper.save(a7);
         mapper.save(a8);
         mapper.save(a9);
-        B b2 = mapper.read(B.class, 1);
+        B b2 = mapper.read(B.class, 1).orElse(null);
 
         assertEquals(b.id, b2.id);
         assertEquals(b.batchAs.length, b2.batchAs.length);

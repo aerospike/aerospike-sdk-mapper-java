@@ -77,7 +77,7 @@ public class MultipleParameterSetterTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper();
         mapper.save(b);
-        B b2 = mapper.read(B.class, b.key);
+        B b2 = mapper.read(B.class, b.key).orElse(null);
 
         compare(b, b2);
     }

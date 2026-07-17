@@ -102,7 +102,7 @@ public class ListMappingTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        container = mapper.read(TestV1Container.class, 1);
+        container = mapper.read(TestV1Container.class, 1).orElse(null);
         assertEquals(1, container.value.a);
         assertEquals(2, container.value.b);
         assertEquals(3, container.value.c);
@@ -121,7 +121,7 @@ public class ListMappingTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        TestV2Container container2 = mapper.read(TestV2Container.class, 1);
+        TestV2Container container2 = mapper.read(TestV2Container.class, 1).orElse(null);
         assertEquals(1, container2.value.a);
         assertEquals(2, container2.value.b);
         assertEquals(0, container2.value.c);
@@ -141,7 +141,7 @@ public class ListMappingTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        TestV2Container container2 = mapper.read(TestV2Container.class, 1);
+        TestV2Container container2 = mapper.read(TestV2Container.class, 1).orElse(null);
         assertEquals(1, container2.value.a);
         assertEquals(2, container2.value.b);
         assertEquals(0, container2.value.c);
@@ -161,7 +161,7 @@ public class ListMappingTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        TestV3Container container2 = mapper.read(TestV3Container.class, 1);
+        TestV3Container container2 = mapper.read(TestV3Container.class, 1).orElse(null);
         assertEquals(0, container2.value.a);
         assertEquals(2, container2.value.b);
         assertEquals(0, container2.value.c);
@@ -183,7 +183,7 @@ public class ListMappingTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        TestV3Container container2 = mapper.read(TestV3Container.class, 1);
+        TestV3Container container2 = mapper.read(TestV3Container.class, 1).orElse(null);
         assertEquals(0, container2.value.a);
         assertEquals(2, container2.value.b);
         assertEquals(0, container2.value.c);
@@ -205,7 +205,7 @@ public class ListMappingTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        TestV3Container container2 = mapper.read(TestV3Container.class, 1);
+        TestV3Container container2 = mapper.read(TestV3Container.class, 1).orElse(null);
         assertEquals(0, container2.value.a);
         assertEquals(100, container2.value.b);
         assertEquals(0, container2.value.c);

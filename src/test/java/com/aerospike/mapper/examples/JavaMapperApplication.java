@@ -25,7 +25,7 @@ public class JavaMapperApplication extends ApplicationBase {
         Customer customer2 = null;
         for (int i = 0; i < 100; i++) {
             long now = System.nanoTime();
-            customer2 = mapper.read(Customer.class, customer.getCustomerId());
+            customer2 = mapper.read(Customer.class, customer.getCustomerId()).orElse(null);
             System.out.printf("Customer graph read time: %.3fms%n", (System.nanoTime() - now) / 1000000f);
         }
 

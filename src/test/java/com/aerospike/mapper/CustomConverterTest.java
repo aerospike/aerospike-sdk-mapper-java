@@ -131,7 +131,7 @@ public class CustomConverterTest extends MapperBaseTest {
 
         mapper.save(blackjackHand);
 
-        PokerHand hand2 = mapper.read(blackjackHand.getClass(), blackjackHand.id);
+        PokerHand hand2 = mapper.read(blackjackHand.getClass(), blackjackHand.id).orElse(null);
         assertEquals(blackjackHand, hand2);
 
         Record record = readRawRecord(new Key(NAMESPACE, "poker", "1"));

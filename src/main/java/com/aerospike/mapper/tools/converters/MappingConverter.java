@@ -239,17 +239,17 @@ public class MappingConverter {
                 for (int i = 0; i < size; i++) {
                     DeferredObjectLoader.DeferredObjectSetter thisObjectSetter = deferredObjects.get(i);
                     Key key = keyList.get(i);
-                    Record record = recordMap.get(key);
+                    Record loadedRecord = recordMap.get(key);
                     ctx.pushKey(key);
                     try {
                         Object obj = convertToObject(
                                 (Class<Object>) thisObjectSetter.getObject().getType(),
                                 key,
-                                record,
+                                loadedRecord,
                                 (ClassCacheEntry<Object>) classCacheEntryList.get(i),
                                 false,
                                 ctx);
-                        Object result = record == null ? null : obj;
+                        Object result = loadedRecord == null ? null : obj;
                         thisObjectSetter.getSetter().setValue(result);
                     } finally {
                         ctx.popKey();

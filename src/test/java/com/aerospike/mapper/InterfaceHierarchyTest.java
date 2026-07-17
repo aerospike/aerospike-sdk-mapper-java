@@ -104,7 +104,7 @@ public class InterfaceHierarchyTest extends MapperBaseTest {
         );
         
         mapper.save(container, container.children.get(0), container.children.get(1), container.children.get(2));
-        Container readContainer = mapper.read(Container.class, 1);
+        Container readContainer = mapper.read(Container.class, 1).orElse(null);
         assertEquals(container, readContainer);
     }
 
@@ -118,7 +118,7 @@ public class InterfaceHierarchyTest extends MapperBaseTest {
         );
         
         mapper.save(container);
-        NestedContainer readContainer = mapper.read(NestedContainer.class, 2);
+        NestedContainer readContainer = mapper.read(NestedContainer.class, 2).orElse(null);
         assertEquals(container, readContainer);
     }
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,7 +67,7 @@ public class AsyncConcurrencyTest extends AsyncBaseTest {
             mapper.save(p);
         }
 
-        List<CompletableFuture<Parent>> futures = new ArrayList<>();
+        List<CompletableFuture<Optional<Parent>>> futures = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
             futures.add(mapper.readAsync(Parent.class, i));
         }
@@ -76,7 +77,7 @@ public class AsyncConcurrencyTest extends AsyncBaseTest {
         all.get();
 
         for (int i = 0; i < count; i++) {
-            Parent p = futures.get(i).get();
+            Parent p = futures.get(i).get().orElse(null);
             int expectedId = i + 1;
             assertNotNull(p, "Parent " + expectedId + " should not be null");
             assertEquals(expectedId, p.id);
@@ -101,7 +102,7 @@ public class AsyncConcurrencyTest extends AsyncBaseTest {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
 
         for (int i = 1; i <= count; i++) {
-            Detail d = mapper.read(Detail.class, i);
+            Detail d = mapper.read(Detail.class, i).orElse(null);
             assertNotNull(d);
             assertEquals("concurrent-" + i, d.info);
         }

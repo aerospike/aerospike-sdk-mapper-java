@@ -31,7 +31,7 @@ public class LocalDateConverterTest extends MapperBaseTest {
 
         mapper.save(container);
 
-        LocalDateTimeContainer readContainer = mapper.read(LocalDateTimeContainer.class, 1);
+        LocalDateTimeContainer readContainer = mapper.read(LocalDateTimeContainer.class, 1).orElse(null);
         assertEquals(container.id, readContainer.id);
         assertEquals(container.localDate, readContainer.localDate);
         assertEquals(container.localTime, readContainer.localTime);
@@ -63,7 +63,7 @@ public class LocalDateConverterTest extends MapperBaseTest {
         tester.contList.add(container);
         mapper.save(tester);
 
-        LocalDateTimeTester readTester = mapper.read(LocalDateTimeTester.class, 1);
+        LocalDateTimeTester readTester = mapper.read(LocalDateTimeTester.class, 1).orElse(null);
         assertEquals(tester.id, readTester.id);
         assertEquals(tester.cont.localDate, readTester.cont.localDate);
         assertEquals(tester.cont.localDateTime, readTester.cont.localDateTime);

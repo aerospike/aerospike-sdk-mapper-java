@@ -70,7 +70,7 @@ public class ObjectTransformTest extends MapperBaseTest {
         MappingSession mapper = createMapper();
         mapper.save(account);
 
-        Account account2 = mapper.read(Account.class, 1);
+        Account account2 = mapper.read(Account.class, 1).orElse(null);
         assertEquals(account.txns.size(), account2.txns.size());
         assertEquals(account.txns2.size(), account2.txns2.size());
 

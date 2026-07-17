@@ -1239,18 +1239,14 @@ public class ClassCacheEntry<T> {
                         MappingEngine engine = MappingEngine.fromMapper(mapper);
                         if (engine != null) {
                             if (deferred.isDigest()) {
-                                val = engine.readFromDigest(ctx, deferred.getType(), (byte[]) deferred.getKey(), false);
+                                val = engine.readFromDigest(ctx, deferred.getType(), (byte[]) deferred.getKey(), false)
+                                        .orElse(null);
                             } else {
-                                val = engine.read(ctx, deferred.getType(), deferred.getKey(), false);
+                                val = engine.read(ctx, deferred.getType(), deferred.getKey(), false).orElse(null);
                             }
                         } else {
-                            if (deferred.isDigest()) {
-                                val = mapper.asMapper().readFromDigest(
-                                        deferred.getType(), (byte[]) deferred.getKey(), false);
-                            } else {
-                                val = mapper.asMapper().read(
-                                        deferred.getType(), deferred.getKey(), false);
-                            }
+                            throw new IllegalStateException(
+                                    "Deferred object resolution requires a MappingEngine; the legacy IAeroMapper path was removed");
                         }
                     }
                     args[i] = val;

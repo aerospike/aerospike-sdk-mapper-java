@@ -62,7 +62,7 @@ public class AsyncReferenceReadTest extends AsyncBaseTest {
         container.items.add(item3);
         mapper.save(container);
 
-        RefContainer read = mapper.readAsync(RefContainer.class, 1).get();
+        RefContainer read = mapper.readAsync(RefContainer.class, 1).get().orElse(null);
         assertNotNull(read);
         assertEquals("async-container", read.name);
         assertEquals(3, read.items.size());
