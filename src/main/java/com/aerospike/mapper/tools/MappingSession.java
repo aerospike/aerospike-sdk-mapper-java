@@ -198,12 +198,12 @@ public class MappingSession extends Session {
     // -- Virtual lists --
 
     public <T> VirtualList<T> asBackedList(@NotNull Object object, @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(this, engine.getInternalMapper(), object, binName, elementClazz);
+        return new VirtualList<>(this, engine, object, binName, elementClazz);
     }
 
     public <T> VirtualList<T> asBackedList(@NotNull Class<?> owningClazz, @NotNull Object key,
                                            @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(this, engine.getInternalMapper(), owningClazz, key, binName, elementClazz);
+        return new VirtualList<>(this, engine, owningClazz, key, binName, elementClazz);
     }
 
     // -- Async convenience API --
@@ -278,12 +278,12 @@ public class MappingSession extends Session {
 
     public <T> AsyncVirtualList<T> asBackedListAsync(@NotNull Object object,
             @NotNull String binName, Class<T> elementClazz) {
-        return new AsyncVirtualList<>(this, engine.getInternalMapper(), object, binName, elementClazz);
+        return new AsyncVirtualList<>(this, engine, object, binName, elementClazz);
     }
 
     public <T> AsyncVirtualList<T> asBackedListAsync(@NotNull Class<?> owningClazz,
             @NotNull Object key, @NotNull String binName, Class<T> elementClazz) {
-        return new AsyncVirtualList<>(this, engine.getInternalMapper(), owningClazz, key, binName, elementClazz);
+        return new AsyncVirtualList<>(this, engine, owningClazz, key, binName, elementClazz);
     }
 
     // -- Transactions --

@@ -12,7 +12,7 @@ import com.aerospike.mapper.tools.ClassCacheEntry;
 import com.aerospike.mapper.tools.DeferredObjectLoader;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObjectSetter;
 import com.aerospike.mapper.tools.HydrationContext;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.utils.MapperUtils;
 import com.aerospike.mapper.tools.utils.TypeUtils;
@@ -26,10 +26,10 @@ import java.util.Map;
 
 public class MappingConverter {
 
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
 
-    public MappingConverter(IBaseAeroMapper mapper) {
-        this.mapper = mapper;
+    public MappingConverter(MappingEngine engine) {
+        this.engine = engine;
     }
 
     /**
@@ -43,7 +43,7 @@ public class MappingConverter {
         if (obj == null) {
             return null;
         }
-        TypeMapper thisMapper = TypeUtils.getMapper(obj.getClass(), TypeUtils.AnnotatedType.getDefaultAnnotateType(), mapper);
+        TypeMapper thisMapper = TypeUtils.getMapper(obj.getClass(), TypeUtils.AnnotatedType.getDefaultAnnotateType(), engine);
         return thisMapper == null ? obj : thisMapper.toAerospikeFormat(obj);
     }
 
@@ -56,9 +56,10 @@ public class MappingConverter {
      */
     @SuppressWarnings("unchecked")
     public <T> T translateFromAerospike(@NotNull Object obj, @NotNull Class<T> expectedClazz, Session session) {
-        TypeMapper thisMapper = TypeUtils.getMapper(expectedClazz, TypeUtils.AnnotatedType.getDefaultAnnotateType(), mapper);
-        T result = (T) (thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj));
-        resolveDependencies(session);
+        TypeMapper thisMapper = TypeUtils.getMapper(expectedClazz, TypeUtils.AnnotatedType.getDefaultAnnotateType(), engine);
+        HydrationContext ctx = new HydrationContext(session);
+        T result = (T) (thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj, ctx));
+        resolveDependencies(ctx);
         return result;
     }
 
@@ -84,7 +85,7 @@ public class MappingConverter {
     public <T> T convertToObject(Class<T> clazz, Key key, Record record, ClassCacheEntry<T> entry,
                                  boolean resolveDependencies, Session session) {
         if (entry == null) {
-            entry = ClassCache.getInstance().loadClass(clazz, mapper);
+            entry = ClassCache.getInstance().loadClass(clazz, engine);
         }
         HydrationContext ctx = new HydrationContext(session);
         T result = entry.constructAndHydrate(key, record, ctx);
@@ -100,7 +101,7 @@ public class MappingConverter {
     public <T> T convertToObject(Class<T> clazz, Key key, Record record, ClassCacheEntry<T> entry,
                                  boolean resolveDependencies, HydrationContext ctx) {
         if (entry == null) {
-            entry = ClassCache.getInstance().loadClass(clazz, mapper);
+            entry = ClassCache.getInstance().loadClass(clazz, engine);
         }
         T result = entry.constructAndHydrate(key, record, ctx);
         if (resolveDependencies) {
@@ -129,7 +130,7 @@ public class MappingConverter {
      */
     public <T> T convertToObject(Class<T> clazz, List<Object> record, boolean resolveDependencies, HydrationContext ctx) {
         try {
-            ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, mapper);
+            ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, engine);
             T result;
             result = clazz.getConstructor().newInstance();
             entry.hydrateFromList(record, result, false, ctx);
@@ -147,7 +148,7 @@ public class MappingConverter {
      * an instance of the passed class.
      */
     public <T> T convertToObject(Class<T> clazz, Map<String, Object> record) {
-        ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, mapper);
+        ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, engine);
         return entry.constructAndHydrate(record, new HydrationContext(null));
     }
 
@@ -156,7 +157,7 @@ public class MappingConverter {
      */
     @SuppressWarnings("unchecked")
     public <T> List<Object> convertToList(@NotNull T instance) {
-        ClassCacheEntry<T> entry = (ClassCacheEntry<T>) ClassCache.getInstance().loadClass(instance.getClass(), mapper);
+        ClassCacheEntry<T> entry = (ClassCacheEntry<T>) ClassCache.getInstance().loadClass(instance.getClass(), engine);
         return entry.getList(instance, false, false);
     }
 
@@ -166,7 +167,7 @@ public class MappingConverter {
      */
     @SuppressWarnings("unchecked")
     public <T> Map<String, Object> convertToMap(@NotNull T instance) {
-        ClassCacheEntry<T> entry = (ClassCacheEntry<T>) ClassCache.getInstance().loadClass(instance.getClass(), mapper);
+        ClassCacheEntry<T> entry = (ClassCacheEntry<T>) ClassCache.getInstance().loadClass(instance.getClass(), engine);
         return entry.getMap(instance, false);
     }
 
@@ -211,7 +212,7 @@ public class MappingConverter {
                 DeferredObjectSetter thisObjectSetter = iterator.next();
                 DeferredObjectLoader.DeferredObject deferredObject = thisObjectSetter.getObject();
                 Class<?> clazz = deferredObject.getType();
-                ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, mapper);
+                ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, engine);
 
                 Key aKey = createKey(entry, deferredObject);
                 Object result = ctx.getCached(aKey);

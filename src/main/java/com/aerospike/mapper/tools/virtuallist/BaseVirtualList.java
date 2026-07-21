@@ -16,7 +16,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.ClassCacheEntry;
 import com.aerospike.mapper.tools.HydrationContext;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.ValueType;
 import com.aerospike.mapper.tools.mappers.ListMapper;
@@ -36,23 +36,18 @@ public abstract class BaseVirtualList<E> {
     protected final String binName;
     protected final ListMapper listMapper;
     protected final AerospikeEmbed.EmbedType listType;
-    protected final IBaseAeroMapper mapper;
+    protected final MappingEngine engine;
     protected final Session session;
     protected volatile Key key;
 
-    protected BaseVirtualList(@NotNull IBaseAeroMapper mapper, Object object, Class<?> owningClazz, Object key,
-                              @NotNull String binName, @NotNull Class<E> clazz) {
-        this(null, mapper, object, owningClazz, key, binName, clazz);
-    }
-
-    protected BaseVirtualList(Session session, @NotNull IBaseAeroMapper mapper, Object object, Class<?> owningClazz,
+    protected BaseVirtualList(Session session, @NotNull MappingEngine engine, Object object, Class<?> owningClazz,
                               Object key, @NotNull String binName, @NotNull Class<E> clazz) {
         if (object != null) {
             owningClazz = object.getClass();
         }
-        this.mapper = mapper;
+        this.engine = engine;
         this.session = session;
-        this.owningEntry = ClassCache.getInstance().loadClass(owningClazz, mapper);
+        this.owningEntry = ClassCache.getInstance().loadClass(owningClazz, engine);
         Object aerospikeKey;
         if (key == null) {
             aerospikeKey = owningEntry.getKey(object);
@@ -60,7 +55,7 @@ public abstract class BaseVirtualList<E> {
             aerospikeKey = owningEntry.translateKeyToAerospikeKey(key);
         }
 
-        this.elementEntry = ClassCache.getInstance().loadClass(clazz, mapper);
+        this.elementEntry = ClassCache.getInstance().loadClass(clazz, engine);
         this.binName = binName;
         ValueType value = owningEntry.getValueFromBinName(binName);
         if (value == null) {
@@ -97,11 +92,11 @@ public abstract class BaseVirtualList<E> {
      * Copy constructor that replaces the session while sharing all other state.
      * Used by {@code VirtualList.withSession()}.
      */
-    protected BaseVirtualList(Session session, IBaseAeroMapper mapper,
+    protected BaseVirtualList(Session session, MappingEngine engine,
                               ClassCacheEntry<?> owningEntry, ClassCacheEntry<?> elementEntry,
                               String binName, ListMapper listMapper,
                               AerospikeEmbed.EmbedType listType, Key key) {
-        this.mapper = mapper;
+        this.engine = engine;
         this.session = session;
         this.owningEntry = owningEntry;
         this.elementEntry = elementEntry;
@@ -120,7 +115,12 @@ public abstract class BaseVirtualList<E> {
     }
 
     protected Session getSession() {
-        return session != null ? session : mapper.getSession();
+        if (session == null) {
+            throw new IllegalStateException(
+                    "VirtualList requires an explicit Session. " +
+                            "Construct it from MappingSession/TxnMappingView or provide a session-backed copy.");
+        }
+        return session;
     }
 
     protected Value getValue(Object javaObject, boolean isKey) {
@@ -128,7 +128,7 @@ public abstract class BaseVirtualList<E> {
         if (isKey) {
             aerospikeObject = elementEntry.translateKeyToAerospikeKey(javaObject);
         } else {
-            aerospikeObject = mapper.getMappingConverter().translateToAerospike(javaObject);
+            aerospikeObject = engine.getMappingConverter().translateToAerospike(javaObject);
         }
         if (aerospikeObject == null) {
             return null;

@@ -32,7 +32,7 @@ public class AeroRecordMappingFactory implements RecordMappingFactory {
         if (cached != null) {
             return (RecordMapper<T>) cached;
         }
-        ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, engine.getInternalMapper(), false);
+        ClassCacheEntry<T> entry = ClassCache.getInstance().loadClass(clazz, engine, false);
         if (entry == null) {
             return null;
         }

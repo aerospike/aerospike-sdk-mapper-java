@@ -64,7 +64,7 @@ public class ClassCacheEntry<T> {
     private final TreeMap<String, ValueType> values = new TreeMap<>();
     private ClassCacheEntry<?> superClazz;
     private int binCount;
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private Map<Integer, String> ordinals = null;
     private Set<String> fieldsWithOrdinals = null;
     private final ClassConfig classConfig;
@@ -95,9 +95,9 @@ public class ClassCacheEntry<T> {
     private volatile boolean constructed;
 
     // package visibility only.
-    ClassCacheEntry(@NotNull Class<T> clazz, IBaseAeroMapper mapper, ClassConfig config, boolean requireRecord) {
+    ClassCacheEntry(@NotNull Class<T> clazz, MappingEngine engine, ClassConfig config, boolean requireRecord) {
         this.clazz = clazz;
-        this.mapper = mapper;
+        this.engine = engine;
         this.classConfig = config;
 
         AerospikeRecord recordDescription = clazz.getAnnotation(AerospikeRecord.class);
@@ -125,7 +125,7 @@ public class ClassCacheEntry<T> {
         }
         this.loadFieldsFromClass();
         this.loadPropertiesFromClass();
-        this.superClazz = ClassCache.getInstance().loadClass(this.clazz.getSuperclass(), this.mapper, !this.mapAll);
+        this.superClazz = ClassCache.getInstance().loadClass(this.clazz.getSuperclass(), this.engine, !this.mapAll);
         this.binCount = this.values.size() + (superClazz != null ? superClazz.binCount : 0);
         this.formOrdinalsFromValues();
         Method factoryConstructorMethod = findConstructorFactoryMethod();
@@ -546,7 +546,7 @@ public class ClassCacheEntry<T> {
     }
 
     private PropertyDefinition getOrCreateProperty(String name, Map<String, PropertyDefinition> properties) {
-        return properties.computeIfAbsent(name, n -> new PropertyDefinition(n, mapper));
+        return properties.computeIfAbsent(name, n -> new PropertyDefinition(n, engine));
     }
 
     private void loadPropertiesFromClass() {
@@ -567,7 +567,7 @@ public class ClassCacheEntry<T> {
 
             if (thisMethod.isAnnotationPresent(AerospikeKey.class) || isKeyViaConfig) {
                 if (keyProperty == null) {
-                    keyProperty = new PropertyDefinition("_key_", mapper);
+                    keyProperty = new PropertyDefinition("_key_", engine);
                 }
 
                 if (isKeyViaConfig) {
@@ -591,7 +591,7 @@ public class ClassCacheEntry<T> {
             // Handle @AerospikeGeneration annotation on methods (getters/setters)
             if (thisMethod.isAnnotationPresent(AerospikeGeneration.class)) {
                 if (generationProperty == null) {
-                    generationProperty = new PropertyDefinition("_generation_", mapper);
+                    generationProperty = new PropertyDefinition("_generation_", engine);
                 }
 
                 // For getter methods, validate return type
@@ -654,7 +654,7 @@ public class ClassCacheEntry<T> {
             keyProperty.validate(clazz.getName(), config, true);
 
             AnnotatedType annotatedType = new AnnotatedType(config, keyProperty.getGetter());
-            TypeMapper typeMapper = TypeUtils.getMapper(keyProperty.getType(), annotatedType, this.mapper);
+            TypeMapper typeMapper = TypeUtils.getMapper(keyProperty.getType(), annotatedType, this.engine);
             this.key = new ValueType.MethodValue(keyProperty, typeMapper, annotatedType);
         }
 
@@ -667,7 +667,7 @@ public class ClassCacheEntry<T> {
             generationProperty.validate(clazz.getName(), config, false);
 
             AnnotatedType annotatedType = new AnnotatedType(config, generationProperty.getGetter());
-            TypeMapper typeMapper = TypeUtils.getMapper(generationProperty.getType(), annotatedType, this.mapper);
+            TypeMapper typeMapper = TypeUtils.getMapper(generationProperty.getType(), annotatedType, this.engine);
             this.generationField = new ValueType.MethodValue(generationProperty, typeMapper, annotatedType);
         }
 
@@ -681,7 +681,7 @@ public class ClassCacheEntry<T> {
             }
 
             AnnotatedType annotatedType = new AnnotatedType(config, thisProperty.getGetter());
-            TypeMapper typeMapper = TypeUtils.getMapper(thisProperty.getType(), annotatedType, this.mapper);
+            TypeMapper typeMapper = TypeUtils.getMapper(thisProperty.getType(), annotatedType, this.engine);
             ValueType value = new ValueType.MethodValue(thisProperty, typeMapper, annotatedType);
             values.put(thisPropertyName, value);
         }
@@ -747,7 +747,7 @@ public class ClassCacheEntry<T> {
             }
 
             AnnotatedType annotatedType = new AnnotatedType(config, thisField);
-            TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.mapper);
+            TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.engine);
             this.key = new ValueType.FieldValue(thisField, typeMapper, annotatedType);
             this.keyAsBin = storeAsBin;
             return true;
@@ -781,7 +781,7 @@ public class ClassCacheEntry<T> {
             }
 
             AnnotatedType annotatedType = new AnnotatedType(config, thisField);
-            TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.mapper);
+            TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.engine);
             this.generationField = new ValueType.FieldValue(thisField, typeMapper, annotatedType);
         }
         return isGenerationField;
@@ -813,7 +813,7 @@ public class ClassCacheEntry<T> {
         } else {
             thisField.setAccessible(true);
             AnnotatedType annotatedType = new AnnotatedType(config, thisField);
-            TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.mapper);
+            TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.engine);
             ValueType valueType = new ValueType.FieldValue(thisField, typeMapper, annotatedType);
             values.put(name, valueType);
         }
@@ -858,8 +858,8 @@ public class ClassCacheEntry<T> {
         }
 
         AnnotatedType annotatedType = new AnnotatedType(config, thisField);
-        TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.mapper);
-        PropertyDefinition property = new PropertyDefinition(binName, mapper);
+        TypeMapper typeMapper = TypeUtils.getMapper(thisField.getType(), annotatedType, this.engine);
+        PropertyDefinition property = new PropertyDefinition(binName, engine);
         property.setGetter(getter);
         property.setSetter(setter);
         property.validate(clazz.getName(), config, false);
@@ -1105,7 +1105,7 @@ public class ClassCacheEntry<T> {
                 thisClass = ClassCache.getInstance().getCacheEntryFromStoredName(className);
                 if (thisClass == null) {
                     Class<?> typeClazz = Class.forName(className);
-                    thisClass = ClassCache.getInstance().loadClass(typeClazz, this.mapper);
+                    thisClass = ClassCache.getInstance().loadClass(typeClazz, this.engine);
                 }
             }
 
@@ -1236,17 +1236,11 @@ public class ClassCacheEntry<T> {
                     Object val = javaValuesMap.get(constructorParamBins[i]);
                     if (val instanceof DeferredObject) {
                         DeferredObject deferred = (DeferredObject) val;
-                        MappingEngine engine = MappingEngine.fromMapper(mapper);
-                        if (engine != null) {
-                            if (deferred.isDigest()) {
-                                val = engine.readFromDigest(ctx, deferred.getType(), (byte[]) deferred.getKey(), false)
-                                        .orElse(null);
-                            } else {
-                                val = engine.read(ctx, deferred.getType(), deferred.getKey(), false).orElse(null);
-                            }
+                        if (deferred.isDigest()) {
+                            val = engine.readFromDigest(ctx, deferred.getType(), (byte[]) deferred.getKey(), false)
+                                    .orElse(null);
                         } else {
-                            throw new IllegalStateException(
-                                    "Deferred object resolution requires a MappingEngine; the legacy IAeroMapper path was removed");
+                            val = engine.read(ctx, deferred.getType(), deferred.getKey(), false).orElse(null);
                         }
                     }
                     args[i] = val;
@@ -1289,7 +1283,7 @@ public class ClassCacheEntry<T> {
                     thisClass = ClassCache.getInstance().getCacheEntryFromStoredName(className);
                     if (thisClass == null) {
                         Class<?> typeClazz = Class.forName(className);
-                        thisClass = ClassCache.getInstance().loadClass(typeClazz, this.mapper);
+                        thisClass = ClassCache.getInstance().loadClass(typeClazz, this.engine);
                     }
                     endIndex--;
                 }

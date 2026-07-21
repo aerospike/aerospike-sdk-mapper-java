@@ -12,24 +12,25 @@ import com.aerospike.mapper.annotations.AerospikeReference.ReferenceType;
 import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.ClassCacheEntry;
 import com.aerospike.mapper.tools.HydrationContext;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
-import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObject;
+import com.aerospike.mapper.tools.MappingEngine;
 
 public class ObjectReferenceMapper extends ObjectMapper {
 
+    private static final String IMMEDIATE_READS_REQUIRE_SESSION =
+            "Immediate reference hydration requires a session-backed mapping context. " +
+                    "Use fromAerospikeFormat(value, Session) or a mapping API that supplies session context.";
+
     private final ClassCacheEntry<?> referencedClass;
-    private final IBaseAeroMapper mapper;
     private final MappingEngine engine;
     private final boolean lazy;
     private final boolean allowBatch;
     private final ReferenceType type;
 
     public ObjectReferenceMapper(ClassCacheEntry<?> entry, boolean lazy, boolean allowBatch,
-                                 ReferenceType type, IBaseAeroMapper mapper) {
+                                 ReferenceType type, MappingEngine engine) {
         this.referencedClass = entry;
-        this.mapper = mapper;
-        this.engine = MappingEngine.fromMapper(mapper);
+        this.engine = engine;
         this.lazy = lazy;
         this.type = type;
         this.allowBatch = allowBatch;
@@ -55,7 +56,7 @@ public class ObjectReferenceMapper extends ObjectMapper {
         if (value.getClass().equals(referencedClass.getUnderlyingClass())) {
             classToUse = referencedClass;
         } else {
-            classToUse = ClassCache.getInstance().loadClass(value.getClass(), mapper);
+            classToUse = ClassCache.getInstance().loadClass(value.getClass(), engine);
             isSubclassOfKnownType = true;
         }
         Object key = classToUse.getKey(value);
@@ -92,22 +93,8 @@ public class ObjectReferenceMapper extends ObjectMapper {
         } else if (allowBatch) {
             return new DeferredObject(reference.key, reference.classToUse.getUnderlyingClass(),
                     ReferenceType.DIGEST.equals(type));
-        } else if (ReferenceType.DIGEST.equals(type)) {
-            if (engine == null) {
-                throw new IllegalStateException(
-                        "ObjectReferenceMapper requires a MappingEngine; the legacy IAeroMapper path was removed");
-            }
-            return engine.readFromDigestWithContext(
-                    new HydrationContext(mapper.getSession()),
-                    reference.classToUse.getUnderlyingClass(), (byte[]) reference.key, false).orElse(null);
         } else {
-            if (engine == null) {
-                throw new IllegalStateException(
-                        "ObjectReferenceMapper requires a MappingEngine; the legacy IAeroMapper path was removed");
-            }
-            return engine.readWithContext(
-                    new HydrationContext(mapper.getSession()),
-                    reference.classToUse.getUnderlyingClass(), reference.key, false).orElse(null);
+            throw new IllegalStateException(IMMEDIATE_READS_REQUIRE_SESSION);
         }
     }
 
@@ -120,6 +107,9 @@ public class ObjectReferenceMapper extends ObjectMapper {
             throw new IllegalStateException(
                     "ObjectReferenceMapper requires a HydrationContext; it must not be called outside a hydration scope");
         }
+        if (!this.lazy && !allowBatch && ctx.session() == null) {
+            throw new IllegalStateException(IMMEDIATE_READS_REQUIRE_SESSION);
+        }
         ResolvedReference reference = resolveReference(value);
 
         if (this.lazy) {
@@ -131,16 +121,11 @@ public class ObjectReferenceMapper extends ObjectMapper {
             return new DeferredObject(reference.key, reference.classToUse.getUnderlyingClass(),
                     ReferenceType.DIGEST.equals(type));
         } else {
-            MappingEngine resolvedEngine = this.engine;
-            if (resolvedEngine == null) {
-                throw new IllegalStateException(
-                        "ObjectReferenceMapper has no MappingEngine; cannot perform immediate reads");
-            }
             if (ReferenceType.DIGEST.equals(type)) {
-                return resolvedEngine.readFromDigestWithContext(
+                return engine.readFromDigestWithContext(
                         ctx, reference.classToUse.getUnderlyingClass(), (byte[]) reference.key, false).orElse(null);
             } else {
-                return resolvedEngine.readWithContext(
+                return engine.readWithContext(
                         ctx, reference.classToUse.getUnderlyingClass(), reference.key, false).orElse(null);
             }
         }

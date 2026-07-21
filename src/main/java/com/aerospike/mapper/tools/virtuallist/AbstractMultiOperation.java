@@ -262,7 +262,7 @@ public abstract class AbstractMultiOperation<E, S extends AbstractMultiOperation
                 object = collection.isEmpty() ? null : collection.iterator().next();
             }
             if (object != null) {
-                virtualList.mapper.getMappingConverter().resolveDependencies(ctx);
+                virtualList.engine.getMappingConverter().resolveDependencies(ctx);
             }
         }
         return result;

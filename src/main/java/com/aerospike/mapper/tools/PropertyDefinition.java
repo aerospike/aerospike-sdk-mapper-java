@@ -21,16 +21,16 @@ public class PropertyDefinition {
     }
 
     private final String name;
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private Method getter;
     private Method setter;
     private Class<?> clazz;
     private TypeMapper typeMapper;
     private SetterParamType setterParamType = SetterParamType.NONE;
 
-    public PropertyDefinition(String name, IBaseAeroMapper mapper) {
+    public PropertyDefinition(String name, MappingEngine engine) {
         this.name = name;
-        this.mapper = mapper;
+        this.engine = engine;
     }
 
     public Method getGetter() {
@@ -119,6 +119,6 @@ public class PropertyDefinition {
         }
         this.clazz = getterClazz;
 
-        this.typeMapper = TypeUtils.getMapper(clazz, new AnnotatedType(config, getter), this.mapper);
+        this.typeMapper = TypeUtils.getMapper(clazz, new AnnotatedType(config, getter), this.engine);
     }
 }

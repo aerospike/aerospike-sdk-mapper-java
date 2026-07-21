@@ -170,13 +170,13 @@ final class TxnMappingView extends MappingSession {
 
     @Override
     public <T> VirtualList<T> asBackedList(@NotNull Object object, @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(txnSession, getEngine().getInternalMapper(), object, binName, elementClazz);
+        return new VirtualList<>(txnSession, getEngine(), object, binName, elementClazz);
     }
 
     @Override
     public <T> VirtualList<T> asBackedList(@NotNull Class<?> owningClazz, @NotNull Object key,
                                            @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(txnSession, getEngine().getInternalMapper(), owningClazz, key, binName, elementClazz);
+        return new VirtualList<>(txnSession, getEngine(), owningClazz, key, binName, elementClazz);
     }
 
     @Override

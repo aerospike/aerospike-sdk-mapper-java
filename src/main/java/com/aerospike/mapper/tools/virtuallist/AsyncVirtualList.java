@@ -8,7 +8,7 @@ import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.client.sdk.ErrorStrategy;
 import com.aerospike.mapper.tools.HydrationContext;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.converters.MappingConverter;
 
 import jakarta.validation.constraints.NotNull;
@@ -19,17 +19,17 @@ public class AsyncVirtualList<E> extends BaseVirtualList<E> implements IAsyncVir
 
     private final MappingConverter mappingConverter;
 
-    public AsyncVirtualList(@NotNull Session session, @NotNull IBaseAeroMapper internalMapper,
+    public AsyncVirtualList(@NotNull Session session, @NotNull MappingEngine engine,
                             @NotNull Class<?> owningClazz, @NotNull Object key,
                             @NotNull String binName, @NotNull Class<E> clazz) {
-        super(session, internalMapper, null, owningClazz, key, binName, clazz);
-        this.mappingConverter = internalMapper.getMappingConverter();
+        super(session, engine, null, owningClazz, key, binName, clazz);
+        this.mappingConverter = engine.getMappingConverter();
     }
 
-    public AsyncVirtualList(@NotNull Session session, @NotNull IBaseAeroMapper internalMapper,
+    public AsyncVirtualList(@NotNull Session session, @NotNull MappingEngine engine,
                             @NotNull Object object, @NotNull String binName, @NotNull Class<E> clazz) {
-        super(session, internalMapper, object, null, null, binName, clazz);
-        this.mappingConverter = internalMapper.getMappingConverter();
+        super(session, engine, object, null, null, binName, clazz);
+        this.mappingConverter = engine.getMappingConverter();
     }
 
     public AsyncMultiOperation<E> beginMultiOperation() {
@@ -246,7 +246,7 @@ public class AsyncVirtualList<E> extends BaseVirtualList<E> implements IAsyncVir
     }
 
     private AsyncVirtualList(AsyncVirtualList<E> source, Key newKey) {
-        super(source.session, source.mapper, source.owningEntry, source.elementEntry,
+        super(source.session, source.engine, source.owningEntry, source.elementEntry,
                 source.binName, source.listMapper, source.listType, newKey);
         this.mappingConverter = source.mappingConverter;
     }

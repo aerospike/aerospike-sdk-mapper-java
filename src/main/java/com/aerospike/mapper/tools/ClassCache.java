@@ -25,12 +25,12 @@ public class ClassCache {
         return instance;
     }
 
-    public <T> ClassCacheEntry<T> loadClass(@NotNull Class<T> clazz, IBaseAeroMapper mapper) {
-        return loadClass(clazz, mapper, true);
+    public <T> ClassCacheEntry<T> loadClass(@NotNull Class<T> clazz, MappingEngine engine) {
+        return loadClass(clazz, engine, true);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> ClassCacheEntry<T> loadClass(@NotNull Class<T> clazz, IBaseAeroMapper mapper, boolean requireRecord) {
+    public <T> ClassCacheEntry<T> loadClass(@NotNull Class<T> clazz, MappingEngine engine, boolean requireRecord) {
         if (clazz == null || clazz.isPrimitive() || clazz.equals(Object.class) || clazz.equals(String.class)
                 || clazz.equals(Character.class) || Number.class.isAssignableFrom(clazz)) {
             return null;
@@ -42,7 +42,7 @@ public class ClassCache {
                 entry = (ClassCacheEntry<T>) cacheMap.get(clazz);
                 if (entry == null) {
                     try {
-                        entry = new ClassCacheEntry<>(clazz, mapper, getClassConfig(clazz), requireRecord);
+                        entry = new ClassCacheEntry<>(clazz, engine, getClassConfig(clazz), requireRecord);
                     } catch (NotAnnotatedClass nae) {
                         return null;
                     }

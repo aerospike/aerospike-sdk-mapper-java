@@ -19,15 +19,15 @@ public class MapMapper extends TypeMapper {
     private final Class<?> itemClass;
     @SuppressWarnings("unused")
     private final Class<?> keyClass;
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private final boolean supportedWithoutTranslation;
     private final TypeMapper itemMapper;
     private final TypeMapper keyMapper;
 
     public MapMapper(final Class<?> clazz, final Class<?> keyClass, final Class<?> itemClass,
-                     final TypeMapper keyMapper, final TypeMapper itemMapper, final IBaseAeroMapper mapper) {
+                     final TypeMapper keyMapper, final TypeMapper itemMapper, final MappingEngine engine) {
         this.referencedClass = clazz;
-        this.mapper = mapper;
+        this.engine = engine;
         this.keyMapper = keyMapper;
         this.keyClass = keyClass;
         this.itemMapper = itemMapper;
@@ -50,9 +50,9 @@ public class MapMapper extends TypeMapper {
             Object item = map.get(key);
 
             TypeMapper keyMap = keyMapper != null ? keyMapper
-                    : (key != null ? TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+                    : (key != null ? TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), engine) : null);
             TypeMapper itemMap = itemMapper != null ? itemMapper
-                    : (item != null ? TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+                    : (item != null ? TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), engine) : null);
             Object aeroKey = keyMap != null ? keyMap.toAerospikeFormat(key) : key;
             Object aeroItem = itemMap != null ? itemMap.toAerospikeFormat(item) : item;
             results.put(aeroKey, aeroItem);
@@ -80,9 +80,9 @@ public class MapMapper extends TypeMapper {
             Object item = map.get(key);
 
             TypeMapper keyMap = keyMapper != null ? keyMapper
-                    : (key != null ? TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+                    : (key != null ? TypeUtils.getMapper(key.getClass(), AnnotatedType.getDefaultAnnotateType(), engine) : null);
             TypeMapper itemMap = itemMapper != null ? itemMapper
-                    : (item != null ? TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), mapper) : null);
+                    : (item != null ? TypeUtils.getMapper(item.getClass(), AnnotatedType.getDefaultAnnotateType(), engine) : null);
 
             final Object javaKey = keyMap != null ? keyMap.fromAerospikeFormat(key, ctx) : key;
             final Object javaItem = itemMap != null ? itemMap.fromAerospikeFormat(item, ctx) : item;

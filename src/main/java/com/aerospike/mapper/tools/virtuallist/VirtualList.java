@@ -5,7 +5,7 @@ import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.tools.HydrationContext;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.converters.MappingConverter;
 
 import jakarta.validation.constraints.NotNull;
@@ -15,20 +15,20 @@ public class VirtualList<E> extends BaseVirtualList<E> implements IVirtualList<E
 
     private final MappingConverter mappingConverter;
 
-    public VirtualList(Session session, @NotNull IBaseAeroMapper internalMapper, @NotNull Class<?> owningClazz,
+    public VirtualList(Session session, @NotNull MappingEngine engine, @NotNull Class<?> owningClazz,
                        @NotNull Object key, @NotNull String binName, @NotNull Class<E> clazz) {
-        super(session, internalMapper, null, owningClazz, key, binName, clazz);
-        this.mappingConverter = internalMapper.getMappingConverter();
+        super(session, engine, null, owningClazz, key, binName, clazz);
+        this.mappingConverter = engine.getMappingConverter();
     }
 
-    public VirtualList(Session session, @NotNull IBaseAeroMapper internalMapper, @NotNull Object object,
+    public VirtualList(Session session, @NotNull MappingEngine engine, @NotNull Object object,
                        @NotNull String binName, @NotNull Class<E> clazz) {
-        super(session, internalMapper, object, null, null, binName, clazz);
-        this.mappingConverter = internalMapper.getMappingConverter();
+        super(session, engine, object, null, null, binName, clazz);
+        this.mappingConverter = engine.getMappingConverter();
     }
 
     private VirtualList(VirtualList<E> source, Session newSession) {
-        super(newSession, source.mapper,
+        super(newSession, source.engine,
                 source.owningEntry, source.elementEntry, source.binName, source.listMapper,
                 source.listType, source.key);
         this.mappingConverter = source.mappingConverter;

@@ -69,12 +69,10 @@ import org.yaml.snakeyaml.Yaml;
 public class MappingEngine implements AutoCloseable {
 
     private final MappingConverter mappingConverter;
-    private final IBaseAeroMapper internalMapper;
     private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private MappingEngine() {
-        this.internalMapper = new InternalMapperAdapter(this);
-        this.mappingConverter = new MappingConverter(this.internalMapper);
+        this.mappingConverter = new MappingConverter(this);
     }
 
     // -- Public API --
@@ -105,7 +103,7 @@ public class MappingEngine implements AutoCloseable {
      * namespace and set from annotations/YAML configuration.
      */
     public <T> TypedDataSet<T> typedDataSet(Class<T> clazz) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String set = entry.getSetName();
         if ("".equals(set)) {
             set = null;
@@ -114,22 +112,22 @@ public class MappingEngine implements AutoCloseable {
     }
 
     public String getNamespace(Class<?> clazz) {
-        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(clazz, internalMapper);
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(clazz, this);
         return entry == null ? null : entry.getNamespace();
     }
 
     public String getSet(Class<?> clazz) {
-        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(clazz, internalMapper);
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(clazz, this);
         return entry == null ? null : entry.getSetName();
     }
 
     public Object getKey(Object obj) {
-        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(obj.getClass(), internalMapper);
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(obj.getClass(), this);
         return entry == null ? null : entry.getKey(obj);
     }
 
     public Key getRecordKey(Object obj) {
-        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(obj.getClass(), internalMapper);
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(obj.getClass(), this);
         return entry == null ? null : new Key(entry.getNamespace(), entry.getSetName(), Value.get(entry.getKey(obj)));
     }
 
@@ -138,7 +136,7 @@ public class MappingEngine implements AutoCloseable {
      * triggering annotation introspection if the class has not been loaded yet.
      */
     public <T> ClassCacheEntry<T> loadClass(Class<T> clazz) {
-        return ClassCache.getInstance().loadClass(clazz, internalMapper);
+        return ClassCache.getInstance().loadClass(clazz, this);
     }
 
     public RecordMappingFactory asRecordMappingFactory() {
@@ -149,21 +147,6 @@ public class MappingEngine implements AutoCloseable {
 
     public MappingConverter getMappingConverter() {
         return mappingConverter;
-    }
-
-    IBaseAeroMapper getInternalMapper() {
-        return internalMapper;
-    }
-
-    /**
-     * Extracts the {@code MappingEngine} from an {@link IBaseAeroMapper} if
-     * the mapper is backed by one. Returns {@code null} otherwise.
-     */
-    public static MappingEngine fromMapper(IBaseAeroMapper mapper) {
-        if (mapper instanceof InternalMapper im) {
-            return im.getEngine();
-        }
-        return null;
     }
 
     /**
@@ -206,7 +189,7 @@ public class MappingEngine implements AutoCloseable {
     @SuppressWarnings("unchecked")
     <T> void writeObject(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
         Class<T> clazz = (Class<T>) object.getClass();
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
 
         String set = entry.getSetName();
         if ("".equals(set)) {
@@ -265,7 +248,7 @@ public class MappingEngine implements AutoCloseable {
     @SuppressWarnings("unchecked")
     <T> CompletableFuture<Void> writeObjectAsync(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
         Class<T> clazz = (Class<T>) object.getClass();
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
 
         String set = entry.getSetName();
         if ("".equals(set)) {
@@ -325,7 +308,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     <T> CompletableFuture<Optional<T>> readSingleAsync(Session session, Class<T> clazz, Object userKey) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String set = entry.getSetName();
         Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
 
@@ -336,7 +319,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     <T> CompletableFuture<Optional<T>> readFromDigestAsync(Session session, Class<T> clazz, byte[] digest) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
 
         return session.query(key)
@@ -346,7 +329,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     <T> CompletableFuture<Boolean> deleteByKeyAsync(Session session, Class<T> clazz, Object userKey) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         Object asKey = entry.translateKeyToAerospikeKey(userKey);
         Key key = new Key(entry.getNamespace(), entry.getSetName(), Value.get(asKey));
 
@@ -363,7 +346,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     CompletableFuture<Boolean> deleteByObjectAsync(Session session, Object object) {
-        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(object.getClass(), internalMapper);
+        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(object.getClass(), this);
         Key key = new Key(entry.getNamespace(), entry.getSetName(), Value.get(entry.getKey(object)));
 
         return session.delete(key)
@@ -461,26 +444,26 @@ public class MappingEngine implements AutoCloseable {
     }
 
     <T> Optional<T> readFromDigest(Session session, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
         return readSingle(session, clazz, key, entry, resolveDependencies);
     }
 
     <T> Optional<T> read(Session session, Class<T> clazz, Object userKey, boolean resolveDependencies) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String set = entry.getSetName();
         Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
         return readSingle(session, clazz, key, entry, resolveDependencies);
     }
 
     <T> Optional<T> readFromDigest(HydrationContext ctx, Class<T> clazz, byte[] digest, boolean resolveDependencies) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         Key key = new Key(entry.getNamespace(), digest, entry.getSetName(), null);
         return readSingle(ctx, clazz, key, entry, resolveDependencies);
     }
 
     <T> Optional<T> read(HydrationContext ctx, Class<T> clazz, Object userKey, boolean resolveDependencies) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String set = entry.getSetName();
         Key key = new Key(entry.getNamespace(), set, Value.get(entry.translateKeyToAerospikeKey(userKey)));
         return readSingle(ctx, clazz, key, entry, resolveDependencies);
@@ -555,7 +538,7 @@ public class MappingEngine implements AutoCloseable {
 
     @SuppressWarnings("unchecked")
     <T> T[] readBatch(Session session, Class<T> clazz, Object[] userKeys) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String set = entry.getSetName();
         Key[] keys = new Key[userKeys.length];
         for (int i = 0; i < userKeys.length; i++) {
@@ -595,7 +578,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     <T> boolean deleteByKey(Session session, Class<T> clazz, Object userKey) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         Object asKey = entry.translateKeyToAerospikeKey(userKey);
         Key key = new Key(entry.getNamespace(), entry.getSetName(), Value.get(asKey));
 
@@ -606,7 +589,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     boolean deleteByObject(Session session, Object object) {
-        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(object.getClass(), internalMapper);
+        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(object.getClass(), this);
         Key key = new Key(entry.getNamespace(), entry.getSetName(), Value.get(entry.getKey(object)));
 
         try (RecordStream stream = session.delete(key).execute()) {
@@ -655,7 +638,7 @@ public class MappingEngine implements AutoCloseable {
     }
 
     RecordStream buildQueryStream(Session session, Class<?> clazz, String aelFilter, Expression expFilter) {
-        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String namespace = entry.getNamespace();
         String setName = entry.getSetName();
 
@@ -671,7 +654,7 @@ public class MappingEngine implements AutoCloseable {
 
     private <T> void doQuery(Session session, Class<T> clazz, Processor<T> processor,
                              String aelFilter, Expression expFilter) {
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, internalMapper);
+        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
         String namespace = entry.getNamespace();
         String setName = entry.getSetName();
 
@@ -702,33 +685,6 @@ public class MappingEngine implements AutoCloseable {
                     break;
                 }
             }
-        }
-    }
-
-    // -- Internal IBaseAeroMapper adapter --
-
-    private static final class InternalMapperAdapter implements InternalMapper {
-        private final MappingEngine engine;
-
-        InternalMapperAdapter(MappingEngine engine) {
-            this.engine = engine;
-        }
-
-        @Override
-        public MappingEngine getEngine() {
-            return engine;
-        }
-
-        @Override
-        public MappingConverter getMappingConverter() {
-            return engine.mappingConverter;
-        }
-
-        @Override
-        public Session getSession() {
-            throw new UnsupportedOperationException(
-                    "getSession() is not available on InternalMapperAdapter. " +
-                    "Use MappingSession for operations that require a session.");
         }
     }
 
@@ -823,7 +779,7 @@ public class MappingEngine implements AutoCloseable {
         public MappingEngine build() {
             if (classesToPreload != null) {
                 for (Class<?> clazz : classesToPreload) {
-                    ClassCache.getInstance().loadClass(clazz, engine.internalMapper);
+                    ClassCache.getInstance().loadClass(clazz, engine);
                 }
             }
             return engine;

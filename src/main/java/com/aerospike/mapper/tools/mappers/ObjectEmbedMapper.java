@@ -5,7 +5,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.ClassCacheEntry;
 import com.aerospike.mapper.tools.HydrationContext;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 
 import java.util.List;
 import java.util.Map;
@@ -13,13 +13,13 @@ import java.util.Map;
 public class ObjectEmbedMapper extends ObjectMapper {
 
     private final Class<?> referencedClass;
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private final EmbedType type;
     private final boolean skipKey;
 
-    public ObjectEmbedMapper(final Class<?> clazz, final EmbedType type, final IBaseAeroMapper mapper, boolean skipKey) {
+    public ObjectEmbedMapper(final Class<?> clazz, final EmbedType type, final MappingEngine engine, boolean skipKey) {
         this.referencedClass = clazz;
-        this.mapper = mapper;
+        this.engine = engine;
         this.type = type;
         this.skipKey = skipKey;
     }
@@ -35,7 +35,7 @@ public class ObjectEmbedMapper extends ObjectMapper {
         // In this case we want to store a reference to the object.
         boolean needsType = !(referencedClass.equals(value.getClass()));
         // Use the actual class here in case a subclass is passed. In that case needsType will be true.
-        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(value.getClass(), mapper, false);
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(value.getClass(), engine, false);
         switch (type) {
             case LIST:
                 return entry.getList(value, skipKey, needsType);
@@ -62,7 +62,7 @@ public class ObjectEmbedMapper extends ObjectMapper {
         if (isSimple(value)) {
             return value;
         }
-        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(referencedClass, mapper);
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(referencedClass, engine);
         try {
             if (value instanceof Map) {
                 return entry.constructAndHydrate((Map<String, Object>) value, ctx);

@@ -1,9 +1,20 @@
 package com.aerospike.mapper.tools;
 
+import com.aerospike.client.sdk.Session;
+
 public abstract class TypeMapper {
     public abstract Object toAerospikeFormat(Object value);
 
     public abstract Object fromAerospikeFormat(Object value);
+
+    /**
+     * Session-aware deserialization convenience entry point for top-level callers.
+     * Internally this routes through {@link HydrationContext} so nested hydration,
+     * deferred resolution, and key tracking share one context model.
+     */
+    public Object fromAerospikeFormat(Object value, Session session) {
+        return fromAerospikeFormat(value, new HydrationContext(session));
+    }
 
     /**
      * Context-aware deserialization. Mappers that interact with deferred loading

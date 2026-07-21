@@ -27,7 +27,7 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.AerospikeReference;
 import com.aerospike.mapper.annotations.AerospikeReference.ReferenceType;
 import com.aerospike.mapper.tools.ClassCache;
-import com.aerospike.mapper.tools.IBaseAeroMapper;
+import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.configuration.BinConfig;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
@@ -78,7 +78,7 @@ public class TypeUtils {
     }
 
     @SuppressWarnings("unchecked")
-    private static TypeMapper getMapper(Class<?> clazz, AnnotatedType type, IBaseAeroMapper mapper, boolean isForSubType) {
+    private static TypeMapper getMapper(Class<?> clazz, AnnotatedType type, MappingEngine engine, boolean isForSubType) {
         if (clazz == null) {
             return null;
         }
@@ -140,7 +140,7 @@ public class TypeUtils {
                             allowBatch = reference.batchLoad();
                         }
                     }
-                    TypeMapper subMapper = getMapper(elementType, type, mapper, true);
+                    TypeMapper subMapper = getMapper(elementType, type, engine, true);
                     typeMapper = new ArrayMapper(elementType, subMapper, allowBatch);
                     addToMap = false;
                 }
@@ -155,12 +155,12 @@ public class TypeUtils {
 
                     Class<?> keyClazz = (Class<?>) types[0];
                     Class<?> itemClazz = (Class<?>) types[1];
-                    TypeMapper keyMapper = getMapper(keyClazz, type, mapper, true);
-                    TypeMapper itemMapper = getMapper(itemClazz, type, mapper, true);
-                    typeMapper = new MapMapper(clazz, keyClazz, itemClazz, keyMapper, itemMapper, mapper);
+                    TypeMapper keyMapper = getMapper(keyClazz, type, engine, true);
+                    TypeMapper itemMapper = getMapper(itemClazz, type, engine, true);
+                    typeMapper = new MapMapper(clazz, keyClazz, itemClazz, keyMapper, itemMapper, engine);
 
                 } else {
-                    typeMapper = new MapMapper(clazz, null, null, null, null, mapper);
+                    typeMapper = new MapMapper(clazz, null, null, null, null, engine);
                 }
                 addToMap = false;
             } else if (List.class.isAssignableFrom(clazz)) {
@@ -202,10 +202,10 @@ public class TypeUtils {
                     }
 
                     Class<?> subClazz = (Class<?>) types[0];
-                    TypeMapper subMapper = getMapper(subClazz, type, mapper, true);
-                    typeMapper = new ListMapper(clazz, subClazz, subMapper, mapper, embedType, saveKey, allowBatch);
+                    TypeMapper subMapper = getMapper(subClazz, type, engine, true);
+                    typeMapper = new ListMapper(clazz, subClazz, subMapper, engine, embedType, saveKey, allowBatch);
                 } else {
-                    typeMapper = new ListMapper(clazz, null, null, mapper, embedType, saveKey, allowBatch);
+                    typeMapper = new ListMapper(clazz, null, null, engine, embedType, saveKey, allowBatch);
                 }
                 addToMap = false;
             } else if (clazz.isAnnotationPresent(AerospikeRecord.class) || ClassCache.getInstance().hasClassConfig(clazz) || isEmbedded) {
@@ -224,16 +224,16 @@ public class TypeUtils {
                             }
                             boolean saveKey = embedConfig.getSaveKey() != null;
                             boolean skipKey = isForSubType && (embedConfig.getType() == EmbedType.MAP && embedConfig.getElementType() == EmbedType.LIST && (!saveKey));
-                            typeMapper = new ObjectEmbedMapper(clazz, embedType, mapper, skipKey);
+                            typeMapper = new ObjectEmbedMapper(clazz, embedType, engine, skipKey);
                             addToMap = false;
                         } else {
                             // Reference
                             ReferenceConfig ref = binConfig.getReference();
                             typeMapper = new ObjectReferenceMapper(
-                                    ClassCache.getInstance().loadClass(clazz, mapper),
+                                    ClassCache.getInstance().loadClass(clazz, engine),
                                     ref.getLazy() == null ? false : ref.getLazy(),
                                     ref.getBatchLoad() == null ? true : ref.getBatchLoad(),
-                                    ref.getType(), mapper);
+                                    ref.getType(), engine);
                             addToMap = false;
                         }
                     } else {
@@ -245,7 +245,7 @@ public class TypeUtils {
                                         break;
                                     } else {
                                         AerospikeReference ref = (AerospikeReference) annotation;
-                                        typeMapper = new ObjectReferenceMapper(ClassCache.getInstance().loadClass(clazz, mapper), ref.lazy(), ref.batchLoad(), ref.type(), mapper);
+                                        typeMapper = new ObjectReferenceMapper(ClassCache.getInstance().loadClass(clazz, engine), ref.lazy(), ref.batchLoad(), ref.type(), engine);
                                         addToMap = false;
                                     }
                                 }
@@ -257,7 +257,7 @@ public class TypeUtils {
                                     } else {
                                         EmbedType embedType = isForSubType ? embed.elementType() : embed.type();
                                         boolean skipKey = isForSubType && (embed.type() == EmbedType.MAP && embed.elementType() == EmbedType.LIST && (!embed.saveKey()));
-                                        typeMapper = new ObjectEmbedMapper(clazz, embedType, mapper, skipKey);
+                                        typeMapper = new ObjectEmbedMapper(clazz, embedType, engine, skipKey);
                                         addToMap = false;
                                     }
                                 }
@@ -270,7 +270,7 @@ public class TypeUtils {
                 }
                 if (typeMapper == null) {
                     // No annotations were specified, so use the ObjectReferenceMapper with non-lazy references
-                    typeMapper = new ObjectReferenceMapper(ClassCache.getInstance().loadClass(clazz, mapper), false, true, ReferenceType.ID, mapper);
+                    typeMapper = new ObjectReferenceMapper(ClassCache.getInstance().loadClass(clazz, engine), false, true, ReferenceType.ID, engine);
                     addToMap = false;
                 }
             }
@@ -284,8 +284,8 @@ public class TypeUtils {
         return typeMapper;
     }
 
-    public static TypeMapper getMapper(Class<?> clazz, AnnotatedType type, IBaseAeroMapper mapper) {
-        return getMapper(clazz, type, mapper, false);
+    public static TypeMapper getMapper(Class<?> clazz, AnnotatedType type, MappingEngine engine) {
+        return getMapper(clazz, type, engine, false);
     }
 
     public static boolean isByteType(Class<?> clazz) {

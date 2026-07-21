@@ -17,7 +17,7 @@ public class ListMapper extends TypeMapper {
     @SuppressWarnings("unused")
     private final Class<?> referencedClass;
     private final Class<?> instanceClass;
-    private final IBaseAeroMapper mapper;
+    private final MappingEngine engine;
     private final boolean supportedWithoutTranslation;
     private final TypeMapper instanceClassMapper;
     private final EmbedType embedType;
@@ -25,9 +25,9 @@ public class ListMapper extends TypeMapper {
     private final boolean saveKey;
     private final boolean allowBatchLoad;
 
-    public ListMapper(final Class<?> clazz, final Class<?> instanceClass, final TypeMapper instanceClassMapper, final IBaseAeroMapper mapper, final EmbedType embedType, final boolean saveKey, boolean allowBatchLoad) {
+    public ListMapper(final Class<?> clazz, final Class<?> instanceClass, final TypeMapper instanceClassMapper, final MappingEngine engine, final EmbedType embedType, final boolean saveKey, boolean allowBatchLoad) {
         this.referencedClass = clazz;
-        this.mapper = mapper;
+        this.engine = engine;
         this.instanceClass = instanceClass;
         this.supportedWithoutTranslation = TypeUtils.isAerospikeNativeType(instanceClass);
         this.instanceClassMapper = instanceClassMapper;
@@ -46,7 +46,7 @@ public class ListMapper extends TypeMapper {
                     "instead of lists if the object is an AerospikeRecord on instance of class " + clazz.getSimpleName());
         } else {
             if (instanceClass != null) {
-                subTypeEntry = ClassCache.getInstance().loadClass(instanceClass, mapper);
+                subTypeEntry = ClassCache.getInstance().loadClass(instanceClass, engine);
             } else {
                 subTypeEntry = null;
             }
@@ -60,7 +60,7 @@ public class ListMapper extends TypeMapper {
                 if (obj == null) {
                     return null;
                 } else {
-                    TypeMapper thisMapper = TypeUtils.getMapper(obj.getClass(), null, mapper);
+                    TypeMapper thisMapper = TypeUtils.getMapper(obj.getClass(), null, engine);
                     return thisMapper == null ? obj : thisMapper.toAerospikeFormat(obj, true, false);
                 }
             } else {
@@ -156,7 +156,7 @@ public class ListMapper extends TypeMapper {
                     if (obj == null) {
                         results.add(null);
                     } else {
-                        TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), mapper);
+                        TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), engine);
                         Object result = thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj, ctx);
                         if (result instanceof DeferredObject) {
                             final int thisIndex = index;
@@ -208,7 +208,7 @@ public class ListMapper extends TypeMapper {
                 if (obj == null) {
                     return null;
                 } else {
-                    TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), mapper);
+                    TypeMapper thisMapper = TypeUtils.getMapper(getClassToUse(obj), AnnotatedType.getDefaultAnnotateType(), engine);
                     return thisMapper == null ? obj : thisMapper.fromAerospikeFormat(obj, ctx);
                 }
             } else {
