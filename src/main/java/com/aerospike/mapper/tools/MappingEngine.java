@@ -15,11 +15,10 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import jakarta.validation.constraints.NotNull;
 
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Cluster;
@@ -36,12 +35,10 @@ import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.mapper.annotations.AerospikeRecord;
-import com.aerospike.mapper.tools.virtuallist.VirtualList;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 import com.aerospike.mapper.tools.configuration.Configuration;
 import com.aerospike.mapper.tools.converters.MappingConverter;
 import com.aerospike.mapper.tools.utils.MapperUtils;
-import com.aerospike.mapper.tools.utils.TypeUtils;
 import org.yaml.snakeyaml.Yaml;
 
 /**
@@ -70,6 +67,7 @@ public class MappingEngine implements AutoCloseable {
 
     private final MappingConverter mappingConverter;
     private final ExecutorService asyncExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private final Map<Class<?>, TypeMapper> customTypeMappers = new ConcurrentHashMap<>();
 
     private MappingEngine() {
         this.mappingConverter = new MappingConverter(this);
@@ -149,6 +147,14 @@ public class MappingEngine implements AutoCloseable {
         return mappingConverter;
     }
 
+    public TypeMapper getCustomTypeMapper(Class<?> clazz) {
+        return customTypeMappers.get(clazz);
+    }
+
+    void registerCustomTypeMapper(Class<?> clazz, TypeMapper mapper) {
+        customTypeMappers.put(clazz, mapper);
+    }
+
     /**
      * Continue a nested read within an existing hydration scope.
      * Intended for internal use by built-in mappers that must preserve the
@@ -186,8 +192,14 @@ public class MappingEngine implements AutoCloseable {
 
     enum WriteOp { REPLACE, INSERT, UPSERT }
 
+    private record PreparedWrite(Key key, String[] names, Object[] values, Integer ttlSeconds, Integer generationValue) {
+        private boolean isEmpty() {
+            return names.length == 0;
+        }
+    }
+
     @SuppressWarnings("unchecked")
-    <T> void writeObject(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
+    private <T> PreparedWrite prepareWrite(T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
         Class<T> clazz = (Class<T>) object.getClass();
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
 
@@ -199,9 +211,8 @@ public class MappingEngine implements AutoCloseable {
 
         boolean allowNullBins = (op != WriteOp.REPLACE);
         Map<String, Object> binMap = entry.getMap(object, allowNullBins, binNames);
-
         if (binMap.isEmpty()) {
-            return;
+            return new PreparedWrite(key, new String[0], new Object[0], null, null);
         }
 
         int size = binMap.size();
@@ -214,28 +225,38 @@ public class MappingEngine implements AutoCloseable {
             i++;
         }
 
-        var builder = switch (op) {
-            case REPLACE -> session.replace(key);
-            case INSERT -> session.insert(key);
-            case UPSERT -> session.upsert(key);
-        };
-
-        var binsBuilder = builder.bins(names[0],
-                names.length > 1 ? Arrays.copyOfRange(names, 1, names.length) : new String[0]);
-        binsBuilder.values(values);
-
+        Integer ttlSeconds = null;
         if (ttlOverrideSeconds.isPresent()) {
-            binsBuilder.expireRecordAfterSeconds(ttlOverrideSeconds.getAsInt());
+            ttlSeconds = ttlOverrideSeconds.getAsInt();
         } else {
-            Integer ttl = entry.getTtl();
-            if (ttl != null) {
-                binsBuilder.expireRecordAfterSeconds(ttl);
-            }
+            ttlSeconds = entry.getTtl();
+        }
+        Integer generationValue = entry.getGenerationValue(object);
+        return new PreparedWrite(key, names, values, ttlSeconds, generationValue);
+    }
+
+    <T> void writeObject(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
+        PreparedWrite preparedWrite = prepareWrite(object, op, ttlOverrideSeconds, binNames);
+        if (preparedWrite.isEmpty()) {
+            return;
         }
 
-        Integer generationValue = entry.getGenerationValue(object);
-        if (generationValue != null && generationValue > 0) {
-            binsBuilder.ensureGenerationIs(generationValue);
+        var builder = switch (op) {
+            case REPLACE -> session.replace(preparedWrite.key());
+            case INSERT -> session.insert(preparedWrite.key());
+            case UPSERT -> session.upsert(preparedWrite.key());
+        };
+
+        var binsBuilder = builder.bins(preparedWrite.names()[0],
+                preparedWrite.names().length > 1 ? Arrays.copyOfRange(preparedWrite.names(), 1, preparedWrite.names().length) : new String[0]);
+        binsBuilder.values(preparedWrite.values());
+
+        if (preparedWrite.ttlSeconds() != null) {
+            binsBuilder.expireRecordAfterSeconds(preparedWrite.ttlSeconds());
+        }
+
+        if (preparedWrite.generationValue() != null && preparedWrite.generationValue() > 0) {
+            binsBuilder.ensureGenerationIs(preparedWrite.generationValue());
         }
 
         binsBuilder.execute().close();
@@ -245,56 +266,28 @@ public class MappingEngine implements AutoCloseable {
         writeObject(session, object, op, OptionalInt.empty(), binNames);
     }
 
-    @SuppressWarnings("unchecked")
     <T> CompletableFuture<Void> writeObjectAsync(Session session, T object, WriteOp op, OptionalInt ttlOverrideSeconds, String... binNames) {
-        Class<T> clazz = (Class<T>) object.getClass();
-        ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
-
-        String set = entry.getSetName();
-        if ("".equals(set)) {
-            set = null;
-        }
-        Key key = new Key(entry.getNamespace(), set, Value.get(entry.getKey(object)));
-
-        boolean allowNullBins = (op != WriteOp.REPLACE);
-        Map<String, Object> binMap = entry.getMap(object, allowNullBins, binNames);
-
-        if (binMap.isEmpty()) {
+        PreparedWrite preparedWrite = prepareWrite(object, op, ttlOverrideSeconds, binNames);
+        if (preparedWrite.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
 
-        int size = binMap.size();
-        String[] names = new String[size];
-        Object[] values = new Object[size];
-        int i = 0;
-        for (var e : binMap.entrySet()) {
-            names[i] = e.getKey();
-            values[i] = e.getValue();
-            i++;
-        }
-
         var builder = switch (op) {
-            case REPLACE -> session.replace(key);
-            case INSERT -> session.insert(key);
-            case UPSERT -> session.upsert(key);
+            case REPLACE -> session.replace(preparedWrite.key());
+            case INSERT -> session.insert(preparedWrite.key());
+            case UPSERT -> session.upsert(preparedWrite.key());
         };
 
-        var binsBuilder = builder.bins(names[0],
-                names.length > 1 ? Arrays.copyOfRange(names, 1, names.length) : new String[0]);
-        binsBuilder.values(values);
+        var binsBuilder = builder.bins(preparedWrite.names()[0],
+                preparedWrite.names().length > 1 ? Arrays.copyOfRange(preparedWrite.names(), 1, preparedWrite.names().length) : new String[0]);
+        binsBuilder.values(preparedWrite.values());
 
-        if (ttlOverrideSeconds.isPresent()) {
-            binsBuilder.expireRecordAfterSeconds(ttlOverrideSeconds.getAsInt());
-        } else {
-            Integer ttl = entry.getTtl();
-            if (ttl != null) {
-                binsBuilder.expireRecordAfterSeconds(ttl);
-            }
+        if (preparedWrite.ttlSeconds() != null) {
+            binsBuilder.expireRecordAfterSeconds(preparedWrite.ttlSeconds());
         }
 
-        Integer generationValue = entry.getGenerationValue(object);
-        if (generationValue != null && generationValue > 0) {
-            binsBuilder.ensureGenerationIs(generationValue);
+        if (preparedWrite.generationValue() != null && preparedWrite.generationValue() > 0) {
+            binsBuilder.ensureGenerationIs(preparedWrite.generationValue());
         }
 
         return binsBuilder.executeAsync(ErrorStrategy.IN_STREAM)
@@ -639,6 +632,11 @@ public class MappingEngine implements AutoCloseable {
 
     RecordStream buildQueryStream(Session session, Class<?> clazz, String aelFilter, Expression expFilter) {
         ClassCacheEntry<?> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
+        return buildQueryStream(session, entry, aelFilter, expFilter);
+    }
+
+    private RecordStream buildQueryStream(Session session, ClassCacheEntry<?> entry,
+                                          String aelFilter, Expression expFilter) {
         String namespace = entry.getNamespace();
         String setName = entry.getSetName();
 
@@ -655,19 +653,8 @@ public class MappingEngine implements AutoCloseable {
     private <T> void doQuery(Session session, Class<T> clazz, Processor<T> processor,
                              String aelFilter, Expression expFilter) {
         ClassCacheEntry<T> entry = MapperUtils.getEntryAndValidateNamespace(clazz, this);
-        String namespace = entry.getNamespace();
-        String setName = entry.getSetName();
-
-        var dataSet = com.aerospike.client.sdk.DataSet.of(namespace, setName);
-        var queryBuilder = session.query(dataSet);
-        if (aelFilter != null && !aelFilter.isBlank()) {
-            queryBuilder.where(aelFilter);
-        } else if (expFilter != null) {
-            queryBuilder.where(expFilter);
-        }
-
         HydrationContext ctx = new HydrationContext(session);
-        try (RecordStream stream = queryBuilder.execute()) {
+        try (RecordStream stream = buildQueryStream(session, entry, aelFilter, expFilter)) {
             while (stream.hasNext()) {
                 RecordResult rr = stream.next();
                 if (!rr.isOk() || rr.recordOrNull() == null) {
@@ -700,7 +687,7 @@ public class MappingEngine implements AutoCloseable {
 
         public Builder addConverter(Object converter) {
             GenericTypeMapper typeMapper = new GenericTypeMapper(converter);
-            TypeUtils.addTypeMapper(typeMapper.getMappedClass(), typeMapper);
+            engine.registerCustomTypeMapper(typeMapper.getMappedClass(), typeMapper);
             return this;
         }
 

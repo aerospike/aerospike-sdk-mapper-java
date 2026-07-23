@@ -2,10 +2,10 @@ package com.aerospike.mapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.aerospike.client.sdk.AerospikeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.aerospike.mapper.GenerationAnnotationTest.GenerationEntity;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 
@@ -125,9 +125,7 @@ public class GenerationConfigurationTest extends MapperBaseTest {
         
         // Try to update second entity with stale generation - should fail
         readEntity2.setName("Updated by second");
-        assertThrows(Exception.class, () -> {
-            mapper.save(readEntity2);
-        });
+        assertThrows(AerospikeException.class, () -> mapper.save(readEntity2));
     }
 
     @Test

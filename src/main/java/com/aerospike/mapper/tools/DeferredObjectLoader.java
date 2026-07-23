@@ -1,8 +1,5 @@
 package com.aerospike.mapper.tools;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class DeferredObjectLoader {
     public interface DeferredSetter {
         void setValue(Object object);

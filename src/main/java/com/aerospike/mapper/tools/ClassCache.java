@@ -1,6 +1,7 @@
 package com.aerospike.mapper.tools;
 
 import com.aerospike.client.sdk.AerospikeException;
+import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.exceptions.NotAnnotatedClass;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 import com.aerospike.mapper.tools.configuration.Configuration;
@@ -31,8 +32,7 @@ public class ClassCache {
 
     @SuppressWarnings("unchecked")
     public <T> ClassCacheEntry<T> loadClass(@NotNull Class<T> clazz, MappingEngine engine, boolean requireRecord) {
-        if (clazz == null || clazz.isPrimitive() || clazz.equals(Object.class) || clazz.equals(String.class)
-                || clazz.equals(Character.class) || Number.class.isAssignableFrom(clazz)) {
+        if (isSimpleMappedClass(clazz)) {
             return null;
         }
 
@@ -76,6 +76,67 @@ public class ClassCache {
 
     public ClassCacheEntry<?> getCacheEntryFromStoredName(@NotNull String name) {
         return storedNameToCacheEntry.get(name);
+    }
+
+    public ClassCacheEntry<?> resolveTypeIdentifier(@NotNull String typeIdentifier, MappingEngine engine,
+            Class<?> anchorClass) {
+        ClassCacheEntry<?> entry = this.getCacheEntryFromStoredName(typeIdentifier);
+        if (entry != null) {
+            return entry;
+        }
+
+        Class<?> resolvedClass = tryLoadClass(typeIdentifier);
+        if (resolvedClass != null) {
+            return this.loadClass(resolvedClass, engine);
+        }
+
+        if (anchorClass != null) {
+            Class<?> matchedClass = findRelatedTypeByIdentifier(typeIdentifier, anchorClass);
+            if (matchedClass != null) {
+                return this.loadClass(matchedClass, engine);
+            }
+
+            resolvedClass = tryLoadClass(typeIdentifier);
+            if (resolvedClass != null) {
+                return this.loadClass(resolvedClass, engine);
+            }
+        }
+        return null;
+    }
+
+    private static Class<?> tryLoadClass(String typeIdentifier) {
+        try {
+            return Class.forName(typeIdentifier);
+        } catch (ClassNotFoundException ignored) {
+            return null;
+        }
+    }
+
+    private Class<?> findRelatedTypeByIdentifier(String typeIdentifier, Class<?> anchorClass) {
+        Class<?> outermost = anchorClass;
+        while (outermost.getDeclaringClass() != null) {
+            outermost = outermost.getDeclaringClass();
+        }
+
+        for (Class<?> nestedClass : outermost.getDeclaredClasses()) {
+            if (matchesTypeIdentifier(nestedClass, typeIdentifier)) {
+                return nestedClass;
+            }
+        }
+        return null;
+    }
+
+    private static boolean matchesTypeIdentifier(Class<?> candidate, String typeIdentifier) {
+        AerospikeRecord annotation = candidate.getAnnotation(AerospikeRecord.class);
+        if (annotation != null && !annotation.shortName().isBlank() && annotation.shortName().equals(typeIdentifier)) {
+            return true;
+        }
+        return candidate.getSimpleName().equals(typeIdentifier) || candidate.getName().equals(typeIdentifier);
+    }
+
+    private static boolean isSimpleMappedClass(Class<?> clazz) {
+        return clazz == null || clazz.isPrimitive() || clazz.equals(Object.class) || clazz.equals(String.class)
+                || clazz.equals(Character.class) || Number.class.isAssignableFrom(clazz);
     }
 
     public boolean hasClass(Class<?> clazz) {

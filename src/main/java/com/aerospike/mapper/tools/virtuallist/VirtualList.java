@@ -1,9 +1,7 @@
 package com.aerospike.mapper.tools.virtuallist;
 
-import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.Session;
-import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.converters.MappingConverter;

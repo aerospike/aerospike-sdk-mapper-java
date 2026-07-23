@@ -1,15 +1,11 @@
 package com.aerospike.mapper.tools.mappers;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.aerospike.mapper.tools.HydrationContext;
 import com.aerospike.mapper.tools.TypeMapper;
 import com.aerospike.mapper.tools.utils.TypeUtils;
-import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObject;
-import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredObjectSetter;
-import com.aerospike.mapper.tools.DeferredObjectLoader.DeferredSetter;
 
 public class ArrayMapper extends TypeMapper {
 
@@ -30,16 +26,11 @@ public class ArrayMapper extends TypeMapper {
         if (value == null) {
             return null;
         }
-        int length = Array.getLength(value);
         if (this.supportedWithoutTranslation) {
             return value;
         }
 
-        List<Object> results = new ArrayList<>();
-        for (int i = 0; i < length; i++) {
-            results.add(this.instanceClassMapper.toAerospikeFormat(Array.get(value, i)));
-        }
-        return results;
+        return CollectionMapperSupport.mapArrayToAerospikeList(value, this.instanceClassMapper::toAerospikeFormat);
     }
 
     @Override
@@ -58,17 +49,8 @@ public class ArrayMapper extends TypeMapper {
         }
 
         Object result = Array.newInstance(instanceClass, list.size());
-        for (int i = 0; i < list.size(); i++) {
-            Object obj = list.get(i);
-            Object item = this.instanceClassMapper.fromAerospikeFormat(obj, ctx);
-            if (!allowBatch || (!(item instanceof DeferredObject))) {
-                Array.set(result, i, item);
-            } else {
-                final int thisIndex = i;
-                DeferredSetter setter = object -> Array.set(result, thisIndex, object);
-                ctx.addDeferred(new DeferredObjectSetter(setter, (DeferredObject) item));
-            }
-        }
+        CollectionMapperSupport.hydrateArray(list, result,
+                item -> this.instanceClassMapper.fromAerospikeFormat(item, ctx), ctx, allowBatch);
         return result;
     }
 }

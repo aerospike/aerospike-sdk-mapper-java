@@ -4,10 +4,7 @@ import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.exp.Expression;
 import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.tools.virtuallist.AsyncVirtualList;
-import com.aerospike.mapper.tools.virtuallist.VirtualList;
 
-import jakarta.validation.constraints.NotNull;
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -28,155 +25,8 @@ final class TxnMappingView extends MappingSession {
     }
 
     @Override
-    public <T> void save(@NotNull T object, String... binNames) {
-        getEngine().save(txnSession, object, binNames);
-    }
-
-    @Override
-    public <T> void save(@NotNull T object, int ttlSeconds) {
-        getEngine().save(txnSession, object, ttlSeconds);
-    }
-
-    @Override
-    public <T> void save(@NotNull T object, @NotNull Duration ttl) {
-        getEngine().save(txnSession, object, ttl);
-    }
-
-    @Override
-    public <T> void save(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) {
-        getEngine().save(txnSession, object, ttlSeconds, binNames);
-    }
-
-    @Override
-    public <T> void save(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames) {
-        getEngine().save(txnSession, object, ttl, binNames);
-    }
-
-    @Override
-    public <T> void insert(@NotNull T object, String... binNames) {
-        getEngine().insert(txnSession, object, binNames);
-    }
-
-    @Override
-    public <T> void insert(@NotNull T object, int ttlSeconds) {
-        getEngine().insert(txnSession, object, ttlSeconds);
-    }
-
-    @Override
-    public <T> void insert(@NotNull T object, @NotNull Duration ttl) {
-        getEngine().insert(txnSession, object, ttl);
-    }
-
-    @Override
-    public <T> void insert(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) {
-        getEngine().insert(txnSession, object, ttlSeconds, binNames);
-    }
-
-    @Override
-    public <T> void insert(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames) {
-        getEngine().insert(txnSession, object, ttl, binNames);
-    }
-
-    @Override
-    public <T> void update(@NotNull T object, String... binNames) {
-        getEngine().update(txnSession, object, binNames);
-    }
-
-    @Override
-    public <T> void update(@NotNull T object, int ttlSeconds) {
-        getEngine().update(txnSession, object, ttlSeconds);
-    }
-
-    @Override
-    public <T> void update(@NotNull T object, @NotNull Duration ttl) {
-        getEngine().update(txnSession, object, ttl);
-    }
-
-    @Override
-    public <T> void update(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) {
-        getEngine().update(txnSession, object, ttlSeconds, binNames);
-    }
-
-    @Override
-    public <T> void update(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames) {
-        getEngine().update(txnSession, object, ttl, binNames);
-    }
-
-    @Override
-    public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey) {
-        return getEngine().read(txnSession, clazz, userKey, true);
-    }
-
-    @Override
-    public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey, boolean resolveDependencies) {
-        return getEngine().read(txnSession, clazz, userKey, resolveDependencies);
-    }
-
-    @Override
-    public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest) {
-        return getEngine().readFromDigest(txnSession, clazz, digest, true);
-    }
-
-    @Override
-    public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest,
-                                          boolean resolveDependencies) {
-        return getEngine().readFromDigest(txnSession, clazz, digest, resolveDependencies);
-    }
-
-    @Override
-    public <T> T[] read(@NotNull Class<T> clazz, @NotNull Object[] userKeys) {
-        return getEngine().readBatch(txnSession, clazz, userKeys);
-    }
-
-    @Override
-    public <T> boolean delete(@NotNull Class<T> clazz, @NotNull Object userKey) {
-        return getEngine().deleteByKey(txnSession, clazz, userKey);
-    }
-
-    @Override
-    public boolean delete(@NotNull Object object) {
-        return getEngine().deleteByObject(txnSession, object);
-    }
-
-    @Override
-    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor) {
-        getEngine().query(txnSession, clazz, processor);
-    }
-
-    @Override
-    public <T> List<T> query(@NotNull Class<T> clazz) {
-        return getEngine().query(txnSession, clazz);
-    }
-
-    @Override
-    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, String aelExpression) {
-        getEngine().query(txnSession, clazz, processor, aelExpression);
-    }
-
-    @Override
-    public <T> List<T> query(@NotNull Class<T> clazz, String aelExpression) {
-        return getEngine().query(txnSession, clazz, aelExpression);
-    }
-
-    @Override
-    public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, @NotNull Expression filterExp) {
-        getEngine().query(txnSession, clazz, processor, filterExp);
-    }
-
-    @Override
-    public <T> List<T> query(@NotNull Class<T> clazz, @NotNull Expression filterExp) {
-        return getEngine().query(txnSession, clazz, filterExp);
-    }
-
-    @Override
-    public <T> VirtualList<T> asBackedList(@NotNull Object object, @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(txnSession, getEngine(), object, binName, elementClazz);
-    }
-
-    @Override
-    public <T> VirtualList<T> asBackedList(@NotNull Class<?> owningClazz, @NotNull Object key,
-                                           @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(txnSession, getEngine(), owningClazz, key, binName, elementClazz);
+    protected Session routingSession() {
+        return txnSession;
     }
 
     @Override

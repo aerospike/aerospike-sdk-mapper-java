@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class NamespacePlaceHolderTest extends MapperBaseTest {
 
@@ -51,11 +52,6 @@ public class NamespacePlaceHolderTest extends MapperBaseTest {
 
         MappingSession mapper = createMapper();
 
-        try {
-            mapper.save(placeHolderModel1);
-            fail();
-        } catch (AerospikeException ae) {
-            assertTrue(true);
-        }
+        assertThrows(AerospikeException.class, () -> mapper.save(placeHolderModel1));
     }
 }

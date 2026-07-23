@@ -1,7 +1,6 @@
 package com.aerospike.mapper;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.Map;
@@ -72,12 +71,7 @@ public class CompetingAnnotationsTest extends MapperBaseTest {
         b.key = 1;
         b.a = a;
 
-        try {
-            mapper.save(b);
-            fail();
-        } catch (AerospikeException ae) {
-            assertTrue(true);
-        }
+        assertThrows(AerospikeException.class, () -> mapper.save(b));
     }
 
     @Test
@@ -87,12 +81,7 @@ public class CompetingAnnotationsTest extends MapperBaseTest {
         CompetingListReferenceAndEmbedAnnotations b = new CompetingListReferenceAndEmbedAnnotations();
         b.key = 1;
 
-        try {
-            mapper.save(b);
-            fail();
-        } catch (AerospikeException ae) {
-            assertTrue(true);
-        }
+        assertThrows(AerospikeException.class, () -> mapper.save(b));
     }
 
     @Test
@@ -101,12 +90,7 @@ public class CompetingAnnotationsTest extends MapperBaseTest {
 
         CompetingMapReferenceAndEmbedAnnotations b = new CompetingMapReferenceAndEmbedAnnotations();
         b.key = 1;
-        try {
-            mapper.save(b);
-            fail();
-        } catch (AerospikeException ae) {
-            assertTrue(true);
-        }
+        assertThrows(AerospikeException.class, () -> mapper.save(b));
     }
 
     @Test
@@ -116,11 +100,6 @@ public class CompetingAnnotationsTest extends MapperBaseTest {
         CompetingArrayReferenceAndEmbedAnnotations b = new CompetingArrayReferenceAndEmbedAnnotations();
         b.key = 1;
 
-        try {
-            mapper.save(b);
-            fail();
-        } catch (AerospikeException ae) {
-            assertTrue(true);
-        }
+        assertThrows(AerospikeException.class, () -> mapper.save(b));
     }
 }

@@ -4,12 +4,15 @@ import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.tools.TypeMapper;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 public class EnumMapper extends TypeMapper {
 
     private final Class<? extends Enum<?>> clazz;
     private final String enumField;
     private final Field enumRequestedField;
+    private final Map<String, Enum<?>> aerospikeValueLookup;
 
     public EnumMapper(Class<? extends Enum<?>> clazz, String enumField) {
         this.clazz = clazz;
@@ -24,6 +27,7 @@ public class EnumMapper extends TypeMapper {
         } else {
             this.enumRequestedField = null;
         }
+        this.aerospikeValueLookup = buildAerospikeValueLookup();
     }
 
     @Override
@@ -32,18 +36,7 @@ public class EnumMapper extends TypeMapper {
             return null;
         }
 
-        if (!enumField.isEmpty()) {
-            if (enumRequestedField == null) {
-                return null;
-            }
-            try {
-                Object enumValue = enumRequestedField.get(value);
-                return enumValue == null ? null : enumValue.toString();
-            } catch (IllegalAccessException e) {
-                throw toAerospikeException(e);
-            }
-        }
-        return value.toString();
+        return toStoredValue(value);
     }
 
     @Override
@@ -53,26 +46,34 @@ public class EnumMapper extends TypeMapper {
         }
 
         String stringValue = (String) value;
-        Enum<?>[] constants = clazz.getEnumConstants();
-
-        if (!enumField.isEmpty()) {
-            try {
-                for (Enum<?> thisEnum : constants) {
-                    if (enumRequestedField.get(thisEnum).equals(stringValue)) {
-                        return thisEnum;
-                    }
-                }
-            } catch (IllegalAccessException e) {
-                throw toAerospikeException(e);
-            }
-        } else {
-            for (Enum<?> thisEnum : constants) {
-                if (thisEnum.toString().equals(stringValue)) {
-                    return thisEnum;
-                }
-            }
+        Enum<?> enumValue = aerospikeValueLookup.get(stringValue);
+        if (enumValue != null) {
+            return enumValue;
         }
         throw new AerospikeException(String.format("Enum value of \"%s\" not found in type %s", stringValue, clazz));
+    }
+
+    private Map<String, Enum<?>> buildAerospikeValueLookup() {
+        Map<String, Enum<?>> lookup = new HashMap<>();
+        for (Enum<?> constant : clazz.getEnumConstants()) {
+            String storedValue = toStoredValue(constant);
+            if (storedValue != null) {
+                lookup.putIfAbsent(storedValue, constant);
+            }
+        }
+        return lookup;
+    }
+
+    private String toStoredValue(Object value) {
+        if (enumRequestedField == null) {
+            return value.toString();
+        }
+        try {
+            Object enumValue = enumRequestedField.get(value);
+            return enumValue == null ? null : enumValue.toString();
+        } catch (IllegalAccessException e) {
+            throw toAerospikeException(e);
+        }
     }
 
     private AerospikeException toAerospikeException(Exception e) {

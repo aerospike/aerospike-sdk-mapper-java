@@ -1,5 +1,6 @@
 package com.aerospike.mapper;
 
+import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeBin;
@@ -14,8 +15,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Date;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class BasicMappingTest extends MapperBaseTest {
 
@@ -77,20 +78,14 @@ public class BasicMappingTest extends MapperBaseTest {
 
     @Test
     public void testDuplicateName() {
-        try {
-            createMapper(MappingEngine.builder().preLoadClass(DuplicateKeyClass.class));
-            fail();
-        } catch (Exception ignore) {
-        }
+        assertThrows(AerospikeException.class,
+                () -> createMapper(MappingEngine.builder().preLoadClass(DuplicateKeyClass.class)));
     }
 
     @Test
     public void testMissingSetter() {
-        try {
-            createMapper(MappingEngine.builder().preLoadClass(PropertyWithNoSetter.class));
-            fail();
-        } catch (Exception ignore) {
-        }
+        assertThrows(AerospikeException.class,
+                () -> createMapper(MappingEngine.builder().preLoadClass(PropertyWithNoSetter.class)));
     }
 
     @AerospikeRecord(namespace = "test", set = "none", mapAll = false)
@@ -101,9 +96,6 @@ public class BasicMappingTest extends MapperBaseTest {
         @AerospikeGetter(name = "dummy")
         public int getDummy() {
             return 1;
-        }
-
-        public void setDummy(int dummy) {
         }
     }
 

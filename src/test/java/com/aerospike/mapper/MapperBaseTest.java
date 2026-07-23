@@ -19,7 +19,7 @@ import com.aerospike.client.sdk.util.Version;
 import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.MappingEngine;
 import com.aerospike.mapper.tools.MappingSession;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.junit.jupiter.api.AfterAll;
@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 public abstract class MapperBaseTest {
 
     public static final String NAMESPACE = "test";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     protected static Cluster cluster;
     protected static Session session;
     protected static boolean enterprise;
@@ -93,8 +94,10 @@ public abstract class MapperBaseTest {
     }
 
     public void compare(Object original, Object read, boolean showObjects) {
+        ObjectWriter objectWriter = OBJECT_MAPPER.writerWithDefaultPrettyPrinter();
+        JsonNode originalTree = OBJECT_MAPPER.valueToTree(original);
+        JsonNode readTree = OBJECT_MAPPER.valueToTree(read);
         try {
-            ObjectWriter objectWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
             String readString = objectWriter.writeValueAsString(read);
             if (showObjects) {
                 System.out.println("------ Read Data -----\n" + readString);
@@ -103,8 +106,8 @@ public abstract class MapperBaseTest {
             if (showObjects) {
                 System.out.println("------ Original Data -----\n" + originalObject);
             }
-            assertEquals(originalObject, readString);
-        } catch (JsonProcessingException jpe) {
+            assertEquals(originalTree, readTree);
+        } catch (Exception jpe) {
             throw new RuntimeException(jpe);
         }
     }

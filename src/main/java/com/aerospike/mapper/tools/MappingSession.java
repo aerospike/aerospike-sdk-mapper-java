@@ -43,6 +43,15 @@ public class MappingSession extends Session {
         this.engine = engine;
     }
 
+    /**
+     * Returns the SDK session that mapper-level operations should route through.
+     * The default mapping session routes through itself; transactional views
+     * override this to target the underlying transactional session instead.
+     */
+    protected Session routingSession() {
+        return this;
+    }
+
     // -- CRUD --
 
     @SafeVarargs
@@ -53,66 +62,66 @@ public class MappingSession extends Session {
     }
 
     public <T> void save(@NotNull T object, String... binNames) throws AerospikeException {
-        engine.save(this, object, binNames);
+        engine.save(routingSession(), object, binNames);
     }
 
     public <T> void save(@NotNull T object, int ttlSeconds) throws AerospikeException {
-        engine.save(this, object, ttlSeconds);
+        engine.save(routingSession(), object, ttlSeconds);
     }
 
     public <T> void save(@NotNull T object, @NotNull Duration ttl) throws AerospikeException {
-        engine.save(this, object, ttl);
+        engine.save(routingSession(), object, ttl);
     }
 
     public <T> void save(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) throws AerospikeException {
-        engine.save(this, object, ttlSeconds, binNames);
+        engine.save(routingSession(), object, ttlSeconds, binNames);
     }
 
     public <T> void save(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames)
             throws AerospikeException {
-        engine.save(this, object, ttl, binNames);
+        engine.save(routingSession(), object, ttl, binNames);
     }
 
     public <T> void insert(@NotNull T object, String... binNames) throws AerospikeException {
-        engine.insert(this, object, binNames);
+        engine.insert(routingSession(), object, binNames);
     }
 
     public <T> void insert(@NotNull T object, int ttlSeconds) throws AerospikeException {
-        engine.insert(this, object, ttlSeconds);
+        engine.insert(routingSession(), object, ttlSeconds);
     }
 
     public <T> void insert(@NotNull T object, @NotNull Duration ttl) throws AerospikeException {
-        engine.insert(this, object, ttl);
+        engine.insert(routingSession(), object, ttl);
     }
 
     public <T> void insert(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) throws AerospikeException {
-        engine.insert(this, object, ttlSeconds, binNames);
+        engine.insert(routingSession(), object, ttlSeconds, binNames);
     }
 
     public <T> void insert(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames)
             throws AerospikeException {
-        engine.insert(this, object, ttl, binNames);
+        engine.insert(routingSession(), object, ttl, binNames);
     }
 
     public <T> void update(@NotNull T object, String... binNames) throws AerospikeException {
-        engine.update(this, object, binNames);
+        engine.update(routingSession(), object, binNames);
     }
 
     public <T> void update(@NotNull T object, int ttlSeconds) throws AerospikeException {
-        engine.update(this, object, ttlSeconds);
+        engine.update(routingSession(), object, ttlSeconds);
     }
 
     public <T> void update(@NotNull T object, @NotNull Duration ttl) throws AerospikeException {
-        engine.update(this, object, ttl);
+        engine.update(routingSession(), object, ttl);
     }
 
     public <T> void update(@NotNull T object, int ttlSeconds, @NotNull String[] binNames) throws AerospikeException {
-        engine.update(this, object, ttlSeconds, binNames);
+        engine.update(routingSession(), object, ttlSeconds, binNames);
     }
 
     public <T> void update(@NotNull T object, @NotNull Duration ttl, @NotNull String[] binNames)
             throws AerospikeException {
-        engine.update(this, object, ttl, binNames);
+        engine.update(routingSession(), object, ttl, binNames);
     }
 
     public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey) throws AerospikeException {
@@ -121,7 +130,7 @@ public class MappingSession extends Session {
 
     public <T> Optional<T> read(@NotNull Class<T> clazz, @NotNull Object userKey, boolean resolveDependencies)
             throws AerospikeException {
-        return engine.read(this, clazz, userKey, resolveDependencies);
+        return engine.read(routingSession(), clazz, userKey, resolveDependencies);
     }
 
     public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest) throws AerospikeException {
@@ -130,19 +139,19 @@ public class MappingSession extends Session {
 
     public <T> Optional<T> readFromDigest(@NotNull Class<T> clazz, @NotNull byte[] digest, boolean resolveDependencies)
             throws AerospikeException {
-        return engine.readFromDigest(this, clazz, digest, resolveDependencies);
+        return engine.readFromDigest(routingSession(), clazz, digest, resolveDependencies);
     }
 
     public <T> T[] read(@NotNull Class<T> clazz, @NotNull Object[] userKeys) throws AerospikeException {
-        return engine.readBatch(this, clazz, userKeys);
+        return engine.readBatch(routingSession(), clazz, userKeys);
     }
 
     public <T> boolean delete(@NotNull Class<T> clazz, @NotNull Object userKey) throws AerospikeException {
-        return engine.deleteByKey(this, clazz, userKey);
+        return engine.deleteByKey(routingSession(), clazz, userKey);
     }
 
     public boolean delete(@NotNull Object object) throws AerospikeException {
-        return engine.deleteByObject(this, object);
+        return engine.deleteByObject(routingSession(), object);
     }
 
     // -- Scan / Query --
@@ -172,38 +181,38 @@ public class MappingSession extends Session {
     }
 
     public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor) {
-        engine.query(this, clazz, processor);
+        engine.query(routingSession(), clazz, processor);
     }
 
     public <T> List<T> query(@NotNull Class<T> clazz) {
-        return engine.query(this, clazz);
+        return engine.query(routingSession(), clazz);
     }
 
     public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, String aelExpression) {
-        engine.query(this, clazz, processor, aelExpression);
+        engine.query(routingSession(), clazz, processor, aelExpression);
     }
 
     public <T> List<T> query(@NotNull Class<T> clazz, String aelExpression) {
-        return engine.query(this, clazz, aelExpression);
+        return engine.query(routingSession(), clazz, aelExpression);
     }
 
     public <T> void query(@NotNull Class<T> clazz, @NotNull Processor<T> processor, @NotNull Expression filterExp) {
-        engine.query(this, clazz, processor, filterExp);
+        engine.query(routingSession(), clazz, processor, filterExp);
     }
 
     public <T> List<T> query(@NotNull Class<T> clazz, @NotNull Expression filterExp) {
-        return engine.query(this, clazz, filterExp);
+        return engine.query(routingSession(), clazz, filterExp);
     }
 
     // -- Virtual lists --
 
     public <T> VirtualList<T> asBackedList(@NotNull Object object, @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(this, engine, object, binName, elementClazz);
+        return new VirtualList<>(routingSession(), engine, object, binName, elementClazz);
     }
 
     public <T> VirtualList<T> asBackedList(@NotNull Class<?> owningClazz, @NotNull Object key,
                                            @NotNull String binName, Class<T> elementClazz) {
-        return new VirtualList<>(this, engine, owningClazz, key, binName, elementClazz);
+        return new VirtualList<>(routingSession(), engine, owningClazz, key, binName, elementClazz);
     }
 
     // -- Async convenience API --

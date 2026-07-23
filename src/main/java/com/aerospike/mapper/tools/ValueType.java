@@ -68,6 +68,14 @@ public abstract class ValueType {
         return annotatedType;
     }
 
+    private static boolean deferIfNeeded(Object value, HydrationContext ctx, DeferredSetter setter) {
+        if (value instanceof DeferredObject deferredObject) {
+            ctx.addDeferred(new DeferredObjectSetter(setter, deferredObject));
+            return true;
+        }
+        return false;
+    }
+
     public static class FieldValue extends ValueType {
         private final Field field;
 
@@ -93,19 +101,16 @@ public abstract class ValueType {
 
         @Override
         public void set(final Object obj, final Object value, HydrationContext ctx) throws ReflectiveOperationException {
-            if (value instanceof DeferredObject) {
-                DeferredSetter setter = object -> {
+            if (deferIfNeeded(value, ctx, object -> {
                     try {
                         field.set(obj, object);
                     } catch (IllegalArgumentException | IllegalAccessException e) {
                         throw new AerospikeException(String.format("Could not set field %s on %s to %s. Error is %s (%s)", field, obj, value, e.getMessage(), e.getClass()));
                     }
-                };
-                DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                ctx.addDeferred(objectSetter);
-            } else {
-                this.field.set(obj, value);
+                })) {
+                return;
             }
+            this.field.set(obj, value);
         }
 
         @Override
@@ -149,68 +154,48 @@ public abstract class ValueType {
         public void set(final Object obj, final Object value, HydrationContext ctx) throws ReflectiveOperationException {
             if (this.property.getSetter() == null) {
                 throw new AerospikeException("Lazy loading cannot be used on objects with a property key type and no annotated key setter method");
-            } else {
-                switch (this.property.getSetterParamType()) {
-                    case KEY: {
-                        final Key key = ctx.currentKey();
-                        if (key == null) {
-                            throw new AerospikeException(String.format(
-                                    "Could not set property %s from the record key on %s because no current key was available while hydrating the object. Was this record written with sendKey = true?",
-                                    property, obj.getClass().getSimpleName()));
-                        }
-                        if (value instanceof DeferredObject) {
-                            DeferredSetter setter = resolved -> {
-                                try {
-                                    property.getSetter().invoke(obj, resolved, key);
-                                } catch (ReflectiveOperationException e) {
-                                    throw new AerospikeException(String.format("Could not set field %s on %s to %s", property, obj, resolved));
-                                }
-                            };
-                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                            ctx.addDeferred(objectSetter);
-                        } else {
-                            this.property.getSetter().invoke(obj, value, key);
-                        }
-                        break;
-                    }
+            }
 
-                    case VALUE: {
-                        final Key key = ctx.currentKey();
-                        if (key == null) {
-                            throw new AerospikeException(String.format(
-                                    "No current key in HydrationContext for VALUE-type setter %s on %s", property, obj.getClass().getSimpleName()));
-                        }
-                        if (value instanceof DeferredObject) {
-                            DeferredSetter setter = resolved -> {
-                                try {
-                                    property.getSetter().invoke(obj, resolved, key.userKey);
-                                } catch (ReflectiveOperationException e) {
-                                    throw new AerospikeException(String.format("Could not set field %s on %s to %s", property, obj, resolved));
-                                }
-                            };
-                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                            ctx.addDeferred(objectSetter);
-                        } else {
-                            this.property.getSetter().invoke(obj, value, key.userKey);
-                        }
-                        break;
+            switch (this.property.getSetterParamType()) {
+                case KEY -> {
+                    final Key key = requireCurrentKey(ctx, obj,
+                            "Could not set property %s from the record key on %s because no current key was available while hydrating the object. Was this record written with sendKey = true?");
+                    if (deferIfNeeded(value, ctx, resolved -> invokeSetter(obj, resolved, key))) {
+                        return;
                     }
-
-                    default:
-                        if (value instanceof DeferredObject) {
-                            DeferredSetter setter = resolved -> {
-                                try {
-                                    property.getSetter().invoke(obj, resolved);
-                                } catch (ReflectiveOperationException e) {
-                                    throw new AerospikeException(String.format("Could not set field %s on %s to %s", property, obj, resolved));
-                                }
-                            };
-                            DeferredObjectSetter objectSetter = new DeferredObjectSetter(setter, (DeferredObject) value);
-                            ctx.addDeferred(objectSetter);
-                        } else {
-                            this.property.getSetter().invoke(obj, value);
-                        }
+                    invokeSetter(obj, value, key);
                 }
+                case VALUE -> {
+                    final Key key = requireCurrentKey(ctx, obj,
+                            "No current key in HydrationContext for VALUE-type setter %s on %s");
+                    if (deferIfNeeded(value, ctx, resolved -> invokeSetter(obj, resolved, key.userKey))) {
+                        return;
+                    }
+                    invokeSetter(obj, value, key.userKey);
+                }
+                case NONE -> {
+                    if (deferIfNeeded(value, ctx, resolved -> invokeSetter(obj, resolved))) {
+                        return;
+                    }
+                    invokeSetter(obj, value);
+                }
+            }
+        }
+
+        private Key requireCurrentKey(HydrationContext ctx, Object obj, String messageTemplate) {
+            Key key = ctx.currentKey();
+            if (key == null) {
+                throw new AerospikeException(String.format(messageTemplate, property, obj.getClass().getSimpleName()));
+            }
+            return key;
+        }
+
+        private void invokeSetter(Object obj, Object... args) {
+            try {
+                property.getSetter().invoke(obj, args);
+            } catch (ReflectiveOperationException e) {
+                Object assignedValue = args.length == 0 ? null : args[0];
+                throw new AerospikeException(String.format("Could not set field %s on %s to %s", property, obj, assignedValue));
             }
         }
 

@@ -50,8 +50,6 @@ public class VirtualListWithKeyConstructorTest extends MapperBaseTest {
         }
 
         public void setB(String b) {
-            // TODO
-            //this.b = key.userKey + ":" +b;
             this.b = b;
         }
 
@@ -202,9 +200,6 @@ public class VirtualListWithKeyConstructorTest extends MapperBaseTest {
         mapper.save(a, b, c, d, e, f, g, h, i, j);
 
         VirtualList<B> list = mapper.asBackedList(collection, "elements", B.class);
-//		list.append(new CollectionElement(103, "tom", 45678));
-//		System.out.println("Get by index returned: " + list.get(2));
-//		System.out.println("Delete by Key Range returned: " + list.removeByKeyRange(100, 102, true));
         @SuppressWarnings("unchecked")
         List<B> results = (List<B>) list.beginMultiOperation()
                 .append(new B(104, "tim", 22222, i, e, f))
@@ -212,9 +207,6 @@ public class VirtualListWithKeyConstructorTest extends MapperBaseTest {
                 .append(new B(105, "sam", 33333, j, a, b))
                 .append(new B(106, "rob", 44444, j, g))
                 .getByKeyRange(101, 105)
-//				.removeByKeyRange(100, 102).asResult()
-//				.get(0)
-//				.size()
                 .end();
 
         assertEquals(4, results.size());

@@ -36,16 +36,11 @@ public class ObjectEmbedMapper extends ObjectMapper {
         boolean needsType = !(referencedClass.equals(value.getClass()));
         // Use the actual class here in case a subclass is passed. In that case needsType will be true.
         ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(value.getClass(), engine, false);
-        switch (type) {
-            case LIST:
-                return entry.getList(value, skipKey, needsType);
-            case MAP:        // Fall through
-                // If unspecified, default to a MAP for embedded objects
-            case DEFAULT:
-                return entry.getMap(value, needsType);
-            default:
-                throw new AerospikeException("Unspecified EmbedType");
-        }
+        return switch (type) {
+            case LIST -> entry.getList(value, skipKey, needsType);
+            case MAP, DEFAULT -> entry.getMap(value, needsType);
+            default -> throw new AerospikeException("Unspecified EmbedType");
+        };
     }
 
     @Override
@@ -64,12 +59,11 @@ public class ObjectEmbedMapper extends ObjectMapper {
         }
         ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(referencedClass, engine);
         try {
-            if (value instanceof Map) {
-                return entry.constructAndHydrate((Map<String, Object>) value, ctx);
-            } else if (value instanceof List) {
-                return entry.constructAndHydrate((List<Object>) value, skipKey, ctx);
-            }
-            throw new AerospikeException("Unexpected type for embedded object: " + value.getClass().getName());
+            return switch (value) {
+                case Map<?, ?> map -> entry.constructAndHydrate((Map<String, Object>) map, ctx);
+                case List<?> list -> entry.constructAndHydrate((List<Object>) list, skipKey, ctx);
+                default -> throw new AerospikeException("Unexpected type for embedded object: " + value.getClass().getName());
+            };
         } catch (AerospikeException ae) {
             throw ae;
         } catch (Exception e) {
@@ -78,8 +72,7 @@ public class ObjectEmbedMapper extends ObjectMapper {
     }
 
     private boolean isSimple(Object value) {
-        Class<?> clazz = value.getClass();
-        return clazz.isPrimitive() || clazz.equals(Object.class) || clazz.equals(String.class)
-                || clazz.equals(Character.class) || Number.class.isAssignableFrom(clazz);
+        return value instanceof String || value instanceof Character || value instanceof Number
+                || value.getClass().equals(Object.class);
     }
 }

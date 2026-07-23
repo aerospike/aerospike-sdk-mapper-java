@@ -31,6 +31,9 @@ import java.util.stream.Collectors;
 
 public abstract class BaseVirtualList<E> {
 
+    private record SortedEntry(Object key, Map.Entry<?, ?> entry) {
+    }
+
     protected final ClassCacheEntry<?> owningEntry;
     protected final ClassCacheEntry<?> elementEntry;
     protected final String binName;
@@ -108,10 +111,11 @@ public abstract class BaseVirtualList<E> {
 
     protected String alignedSet() {
         String set = owningEntry.getSetName();
-        if ("".equals(set)) {
-            return null;
-        }
-        return set;
+        return "".equals(set) ? null : set;
+    }
+
+    protected boolean isListEmbedType() {
+        return listType == AerospikeEmbed.EmbedType.LIST;
     }
 
     protected Session getSession() {
@@ -144,289 +148,260 @@ public abstract class BaseVirtualList<E> {
 
     @SuppressWarnings("unchecked")
     protected Operation getAppendOperation(Object aerospikeObject) {
-        if (aerospikeObject instanceof Map.Entry) {
-            Map.Entry<Object, Object> entry = (Map.Entry<Object, Object>) aerospikeObject;
+        if (aerospikeObject instanceof Map.Entry<?, ?> rawEntry) {
+            Map.Entry<Object, Object> entry = (Map.Entry<Object, Object>) rawEntry;
             return MapOperation.put(new MapPolicy(MapOrder.KEY_ORDERED, 0), binName,
                     Value.get(entry.getKey()), Value.get(entry.getValue()));
-        } else {
-            return ListOperation.append(binName, Value.get(aerospikeObject));
         }
+        return ListOperation.append(binName, Value.get(aerospikeObject));
     }
 
     protected Operation getGetByValueOperation(Object value, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValue(binName, getValue(value, false),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByValue(binName, getValue(value, false),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByValue(binName, getValue(value, false),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByValueRangeOperation(Object startValue, Object endValue, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValueRange(binName, getValue(startValue, false), getValue(endValue, false),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByValueRange(binName, getValue(startValue, false), getValue(endValue, false),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByValueRange(binName, getValue(startValue, false), getValue(endValue, false),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByValueListOperation(List<Object> values, ReturnType returnType) {
         List<Value> aerospikeValues = getValueList(values, false);
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValueList(binName, aerospikeValues,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByValueList(binName, aerospikeValues,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByValueList(binName, aerospikeValues,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByValueRelativeRankRangeOperation(Object value, int rank, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValueRelativeRankRange(binName, getValue(value, false), rank,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByValueRelativeRankRange(binName, getValue(value, false), rank,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByValueRelativeRankRange(binName, getValue(value, false), rank,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByValueRelativeRankRangeOperation(Object value, int rank, int count, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValueRelativeRankRange(binName, getValue(value, false), rank, count,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByValueRelativeRankRange(binName, getValue(value, false), rank, count,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByValueRelativeRankRange(binName, getValue(value, false), rank, count,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByIndexRangeOperation(int index, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByIndexRange(binName, index,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByIndexRange(binName, index,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByIndexRange(binName, index,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByIndexRangeOperation(int index, int count, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByIndexRange(binName, index, count,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByIndexRange(binName, index, count,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByIndexRange(binName, index, count,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByRankOperation(int rank, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByRank(binName, rank,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByRank(binName, rank,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByRank(binName, rank,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByRankRangeOperation(int rank, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByRankRange(binName, rank,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByRankRange(binName, rank,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByRankRange(binName, rank,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByRankRangeOperation(int rank, int count, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByRankRange(binName, rank, count,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByRankRange(binName, rank, count,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByRankRange(binName, rank, count,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByKeyOperation(Object mapKey, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValue(binName, getValue(mapKey, true),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByKey(binName, getValue(mapKey, true),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByKey(binName, getValue(mapKey, true),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getGetByKeyRangeOperation(Object startKey, Object endKey, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByValueRange(binName, getValue(startKey, true), getValue(endKey, true),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.getByKeyRange(binName, getValue(startKey, true), getValue(endKey, true),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.getByKeyRange(binName, getValue(startKey, true), getValue(endKey, true),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByKeyOperation(Object mapKey, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValue(binName, getValue(mapKey, true),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByKey(binName, getValue(mapKey, true),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByKey(binName, getValue(mapKey, true),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByKeyRangeOperation(Object startKey, Object endKey, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValueRange(binName, getValue(startKey, true), getValue(endKey, true),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByKeyRange(binName, getValue(startKey, true), getValue(endKey, true),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByKeyRange(binName, getValue(startKey, true), getValue(endKey, true),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByValueOperation(Object value, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValue(binName, getValue(value, false),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByValue(binName, getValue(value, false),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByValue(binName, getValue(value, false),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByValueListOperation(List<Object> values, ReturnType returnType) {
         List<Value> aerospikeValues = getValueList(values, false);
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValueList(binName, aerospikeValues,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByValueList(binName, aerospikeValues,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByValueList(binName, aerospikeValues,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByValueRangeOperation(Object startValue, Object endValue, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValueRange(binName, getValue(startValue, false), getValue(endValue, false),
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByValueRange(binName, getValue(startValue, false), getValue(endValue, false),
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByValueRange(binName, getValue(startValue, false), getValue(endValue, false),
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByValueRelativeRankRangeOperation(Object value, int rank, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValueRelativeRankRange(binName, getValue(value, false), rank,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByValueRelativeRankRange(binName, getValue(value, false), rank,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByValueRelativeRankRange(binName, getValue(value, false), rank,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByValueRelativeRankRangeOperation(Object value, int rank, int count, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByValueRelativeRankRange(binName, getValue(value, false), rank, count,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByValueRelativeRankRange(binName, getValue(value, false), rank, count,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByValueRelativeRankRange(binName, getValue(value, false), rank, count,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByIndexOperation(int index, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByIndex(binName, index,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByIndex(binName, index,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByIndex(binName, index,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByIndexRangeOperation(int index, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByIndexRange(binName, index,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByIndexRange(binName, index,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByIndexRange(binName, index,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByIndexRangeOperation(int index, int count, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByIndexRange(binName, index, count,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByIndexRange(binName, index, count,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByIndexRange(binName, index, count,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByRankOperation(int rank, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByRank(binName, rank,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByRank(binName, rank,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByRank(binName, rank,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByRankRangeOperation(int rank, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByRankRange(binName, rank,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByRankRange(binName, rank,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByRankRange(binName, rank,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getRemoveByRankRangeOperation(int rank, int count, ReturnType returnType) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.removeByRankRange(binName, rank, count,
                     TypeUtils.returnTypeToListReturnType(returnType));
-        } else {
-            return MapOperation.removeByRankRange(binName, rank, count,
-                    TypeUtils.returnTypeToMapReturnType(returnType));
         }
+        return MapOperation.removeByRankRange(binName, rank, count,
+                TypeUtils.returnTypeToMapReturnType(returnType));
     }
 
     protected Operation getByIndexOperation(int index) {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.getByIndex(binName, index, ListReturnType.VALUE);
-        } else {
-            return MapOperation.getByIndex(binName, index, MapReturnType.KEY_VALUE);
         }
+        return MapOperation.getByIndex(binName, index, MapReturnType.KEY_VALUE);
     }
 
     protected Operation getSizeOperation() {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.size(binName);
-        } else {
-            return MapOperation.size(binName);
         }
+        return MapOperation.size(binName);
     }
 
     protected Operation getClearOperation() {
-        if (listType == AerospikeEmbed.EmbedType.LIST) {
+        if (isListEmbedType()) {
             return ListOperation.clear(binName);
-        } else {
-            return MapOperation.clear(binName);
         }
+        return MapOperation.clear(binName);
     }
 
     protected Record executeOperations(Operation... operations) {
@@ -459,23 +434,16 @@ public abstract class BaseVirtualList<E> {
         if (rawResult == null) {
             return null;
         }
-        if (rawResult instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) rawResult;
+        if (rawResult instanceof Map<?, ?> map) {
             List<Map.Entry<?, ?>> entries = new ArrayList<>(map.entrySet());
-            entries.sort((a, b) -> {
-                Object ka = a.getKey(), kb = b.getKey();
-                if (ka instanceof Comparable && kb instanceof Comparable) {
-                    return ((Comparable<Object>) ka).compareTo(kb);
-                }
-                return 0;
-            });
+            entries.sort((a, b) -> compareMapKeys(a.getKey(), b.getKey()));
             List<E> results = new ArrayList<>(entries.size());
             for (Map.Entry<?, ?> entry : entries) {
                 results.add((E) listMapper.fromAerospikeInstanceFormat(entry, ctx));
             }
             return results;
-        } else if (rawResult instanceof Collection) {
-            Collection<Object> source = (Collection<Object>) rawResult;
+        } else if (rawResult instanceof Collection<?> sourceCollection) {
+            Collection<Object> source = (Collection<Object>) sourceCollection;
             List<E> results = new ArrayList<>(source.size());
             for (Object item : source) {
                 results.add((E) listMapper.fromAerospikeInstanceFormat(item, ctx));
@@ -483,5 +451,13 @@ public abstract class BaseVirtualList<E> {
             return results;
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private int compareMapKeys(Object firstKey, Object secondKey) {
+        if (firstKey instanceof Comparable<?> firstComparable && secondKey instanceof Comparable<?>) {
+            return ((Comparable<Object>) firstComparable).compareTo(secondKey);
+        }
+        return 0;
     }
 }

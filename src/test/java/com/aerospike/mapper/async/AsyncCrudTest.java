@@ -1,5 +1,7 @@
 package com.aerospike.mapper.async;
 
+import com.aerospike.client.sdk.Key;
+import com.aerospike.client.sdk.Record;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
@@ -99,6 +101,33 @@ public class AsyncCrudTest extends AsyncBaseTest {
         Item read = mapper.read(Item.class, 20).orElse(null);
         assertNotNull(read);
         assertEquals("after", read.name);
+    }
+
+    @Test
+    void saveAndUpdateAsyncWithPartialBinsPreserveExpectedReplaceAndUpsertSemantics() throws Exception {
+        MappingSession mapper = createMapper();
+        truncateSet("test", "asyncCrud");
+
+        Item item = new Item(21, "before");
+        mapper.saveAsync(item).get();
+
+        item.name = "partial-save";
+        mapper.saveAsync(item, "id").get();
+
+        Record afterPartialSave = readRawRecord(new Key("test", "asyncCrud", 21));
+        assertNotNull(afterPartialSave);
+        assertEquals(1, afterPartialSave.bins.size());
+        assertEquals(21, afterPartialSave.getInt("id"));
+        assertNull(afterPartialSave.getString("name"));
+
+        item.name = "after-update";
+        mapper.updateAsync(item, "name").get();
+
+        Record afterPartialUpdate = readRawRecord(new Key("test", "asyncCrud", 21));
+        assertNotNull(afterPartialUpdate);
+        assertEquals(2, afterPartialUpdate.bins.size());
+        assertEquals(21, afterPartialUpdate.getInt("id"));
+        assertEquals("after-update", afterPartialUpdate.getString("name"));
     }
 
     @Test

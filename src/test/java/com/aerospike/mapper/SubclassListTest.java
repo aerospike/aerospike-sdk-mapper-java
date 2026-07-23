@@ -68,7 +68,6 @@ public class SubclassListTest extends MapperBaseTest {
         container.accounts.add(savings);
 
         MappingSession mapper = createMapper();
-//		mapper.save(container.account);
         mapper.save(container);
 
         Container object = mapper.read(Container.class, 1).orElse(null);

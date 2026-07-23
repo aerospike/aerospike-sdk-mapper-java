@@ -1,5 +1,6 @@
 package com.aerospike.mapper;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
+import com.aerospike.mapper.tools.ClassCache;
 import com.aerospike.mapper.tools.MappingSession;
 
 public class SubclassMapTest extends MapperBaseTest {
@@ -68,7 +70,6 @@ public class SubclassMapTest extends MapperBaseTest {
         container.accounts.add(savings);
 
         MappingSession mapper = createMapper();
-//		mapper.save(container.account);
         mapper.save(container);
 
         Container object = mapper.read(Container.class, 1).orElse(null);
@@ -86,5 +87,36 @@ public class SubclassMapTest extends MapperBaseTest {
         assertEquals(container.accounts.get(1).id, object.accounts.get(1).id);
         assertEquals(container.accounts.get(1).name, object.accounts.get(1).name);
         assertEquals(((Savings) container.accounts.get(1)).balance, ((Savings) object.accounts.get(1)).balance);
+    }
+
+    @Test
+    public void readAfterCacheClearResolvesStoredSubtypeShortName() {
+        Container container = new Container();
+        container.id = 1001;
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.id = 2002;
+        portfolio.name = "Portfolio";
+        portfolio.subAccounts.add("sub-a");
+        container.account = portfolio;
+
+        Savings savings = new Savings();
+        savings.id = 3003;
+        savings.name = "Savings";
+        savings.balance = 17;
+        container.accounts.add(portfolio);
+        container.accounts.add(savings);
+
+        MappingSession writer = createMapper();
+        writer.save(container);
+
+        // Simulate a fresh JVM / cold mapper cache before reading persisted subtype markers.
+        ClassCache.getInstance().clear();
+
+        MappingSession reader = createMapper();
+        Container object = assertDoesNotThrow(() -> reader.read(Container.class, container.id).orElse(null));
+
+        assertEquals(Portfolio.class, object.account.getClass());
+        assertEquals(Savings.class, object.accounts.get(1).getClass());
     }
 }

@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -59,6 +61,23 @@ public class TypeUtils {
 
     private static final Map<Class<?>, TypeMapper> mappers = new ConcurrentHashMap<>();
 
+    private enum GenericPosition {
+        LIST_ELEMENT("list element", true),
+        MAP_KEY("map key", false),
+        MAP_VALUE("map value", true);
+
+        private final String description;
+        private final boolean upperBoundWildcardSupported;
+
+        GenericPosition(String description, boolean upperBoundWildcardSupported) {
+            this.description = description;
+            this.upperBoundWildcardSupported = upperBoundWildcardSupported;
+        }
+    }
+
+    private record CollectionMappingOptions(EmbedType embedType, boolean saveKey, boolean allowBatchLoad) {
+    }
+
     private TypeUtils() {
     }
 
@@ -81,6 +100,12 @@ public class TypeUtils {
     private static TypeMapper getMapper(Class<?> clazz, AnnotatedType type, MappingEngine engine, boolean isForSubType) {
         if (clazz == null) {
             return null;
+        }
+        if (engine != null) {
+            TypeMapper customMapper = engine.getCustomTypeMapper(clazz);
+            if (customMapper != null) {
+                return customMapper;
+            }
         }
         boolean isEmbedded = type != null && type.annotations != null && Arrays.stream(type.annotations)
                 .anyMatch(a -> a.annotationType().isAssignableFrom(AerospikeEmbed.class));
@@ -145,7 +170,7 @@ public class TypeUtils {
                     addToMap = false;
                 }
             } else if (Map.class.isAssignableFrom(clazz)) {
-                if (type.isParameterizedType()) {
+                if (type != null && type.isParameterizedType()) {
                     ParameterizedType paramType = type.getParameterizedType();
                     Type[] types = paramType.getActualTypeArguments();
                     if (types.length != 2) {
@@ -153,10 +178,12 @@ public class TypeUtils {
                                 clazz.getName(), types.length));
                     }
 
-                    Class<?> keyClazz = (Class<?>) types[0];
-                    Class<?> itemClazz = (Class<?>) types[1];
-                    TypeMapper keyMapper = getMapper(keyClazz, type, engine, true);
-                    TypeMapper itemMapper = getMapper(itemClazz, type, engine, true);
+                    Type keyType = normalizeSupportedTypeArgument(types[0], GenericPosition.MAP_KEY, clazz);
+                    Type itemType = normalizeSupportedTypeArgument(types[1], GenericPosition.MAP_VALUE, clazz);
+                    Class<?> keyClazz = rawClassOf(keyType);
+                    Class<?> itemClazz = rawClassOf(itemType);
+                    TypeMapper keyMapper = getMapper(keyClazz, forTypeArgument(type, keyType), engine, true);
+                    TypeMapper itemMapper = getMapper(itemClazz, forTypeArgument(type, itemType), engine, true);
                     typeMapper = new MapMapper(clazz, keyClazz, itemClazz, keyMapper, itemMapper, engine);
 
                 } else {
@@ -164,34 +191,7 @@ public class TypeUtils {
                 }
                 addToMap = false;
             } else if (List.class.isAssignableFrom(clazz)) {
-                EmbedType embedType = EmbedType.DEFAULT;
-                boolean saveKey = true;
-                boolean allowBatch = true;
-                if (type != null && type.getAnnotations() != null) {
-                    AerospikeEmbed embed = type.getAnnotation(AerospikeEmbed.class);
-                    if (embed != null) {
-                        embedType = embed.type();
-                        saveKey = embed.saveKey();
-                    }
-                    AerospikeReference reference = type.getAnnotation(AerospikeReference.class);
-                    if (reference != null) {
-                        allowBatch = reference.batchLoad();
-                    }
-                }
-                BinConfig binConfig = type != null ? type.getBinConfig() : null;
-                if (binConfig != null && binConfig.getEmbed() != null) {
-                    if (binConfig.getEmbed().getSaveKey() != null) {
-                        saveKey = binConfig.getEmbed().getSaveKey();
-                    }
-                    if (binConfig.getEmbed().getType() != null) {
-                        embedType = binConfig.getEmbed().getType();
-                    }
-                }
-                if (binConfig != null && binConfig.getReference() != null) {
-                    if (binConfig.getReference().getBatchLoad() != null) {
-                        allowBatch = binConfig.getReference().getBatchLoad();
-                    }
-                }
+                CollectionMappingOptions options = resolveListMappingOptions(type);
 
                 if (type != null && type.isParameterizedType()) {
                     ParameterizedType paramType = type.getParameterizedType();
@@ -201,11 +201,14 @@ public class TypeUtils {
                                 clazz.getName(), types.length));
                     }
 
-                    Class<?> subClazz = (Class<?>) types[0];
-                    TypeMapper subMapper = getMapper(subClazz, type, engine, true);
-                    typeMapper = new ListMapper(clazz, subClazz, subMapper, engine, embedType, saveKey, allowBatch);
+                    Type subType = normalizeSupportedTypeArgument(types[0], GenericPosition.LIST_ELEMENT, clazz);
+                    Class<?> subClazz = rawClassOf(subType);
+                    TypeMapper subMapper = getMapper(subClazz, forTypeArgument(type, subType), engine, true);
+                    typeMapper = new ListMapper(clazz, subClazz, subMapper, engine, options.embedType(), options.saveKey(),
+                            options.allowBatchLoad());
                 } else {
-                    typeMapper = new ListMapper(clazz, null, null, engine, embedType, saveKey, allowBatch);
+                    typeMapper = new ListMapper(clazz, null, null, engine, options.embedType(), options.saveKey(),
+                            options.allowBatchLoad());
                 }
                 addToMap = false;
             } else if (clazz.isAnnotationPresent(AerospikeRecord.class) || ClassCache.getInstance().hasClassConfig(clazz) || isEmbedded) {
@@ -284,6 +287,109 @@ public class TypeUtils {
         return typeMapper;
     }
 
+    private static Class<?> rawClassOf(Type type) {
+        return switch (type) {
+            case Class<?> clazz -> clazz;
+            case ParameterizedType parameterizedType -> {
+                Type rawType = parameterizedType.getRawType();
+                if (rawType instanceof Class<?> rawClazz) {
+                    yield rawClazz;
+                }
+                throw new AerospikeException("Unsupported reflective type for mapper resolution: " + typeName(type));
+            }
+            default -> throw new AerospikeException("Unsupported reflective type for mapper resolution: " + typeName(type));
+        };
+    }
+
+    private static Type normalizeSupportedTypeArgument(Type type, GenericPosition position, Class<?> owningClass) {
+        return switch (type) {
+            case Class<?> clazz -> clazz;
+            case ParameterizedType parameterizedType -> parameterizedType;
+            case WildcardType wildcardType -> normalizeWildcardType(wildcardType, position, owningClass);
+            case TypeVariable<?> typeVariable -> throw unsupportedGenericType(owningClass, position, typeVariable,
+                    "unresolved type variables are not supported");
+            default -> throw unsupportedGenericType(owningClass, position, type,
+                    "only concrete classes, parameterized types, and supported upper-bounded wildcards are supported");
+        };
+    }
+
+    private static CollectionMappingOptions resolveListMappingOptions(AnnotatedType type) {
+        EmbedType embedType = EmbedType.DEFAULT;
+        boolean saveKey = true;
+        boolean allowBatchLoad = true;
+
+        if (type != null && type.getAnnotations() != null) {
+            AerospikeEmbed embed = type.getAnnotation(AerospikeEmbed.class);
+            if (embed != null) {
+                embedType = embed.type();
+                saveKey = embed.saveKey();
+            }
+
+            AerospikeReference reference = type.getAnnotation(AerospikeReference.class);
+            if (reference != null) {
+                allowBatchLoad = reference.batchLoad();
+            }
+        }
+
+        BinConfig binConfig = type != null ? type.getBinConfig() : null;
+        if (binConfig != null && binConfig.getEmbed() != null) {
+            if (binConfig.getEmbed().getSaveKey() != null) {
+                saveKey = binConfig.getEmbed().getSaveKey();
+            }
+            if (binConfig.getEmbed().getType() != null) {
+                embedType = binConfig.getEmbed().getType();
+            }
+        }
+        if (binConfig != null && binConfig.getReference() != null && binConfig.getReference().getBatchLoad() != null) {
+            allowBatchLoad = binConfig.getReference().getBatchLoad();
+        }
+        return new CollectionMappingOptions(embedType, saveKey, allowBatchLoad);
+    }
+
+    private static Type normalizeWildcardType(WildcardType wildcardType, GenericPosition position, Class<?> owningClass) {
+        if (!position.upperBoundWildcardSupported) {
+            throw unsupportedGenericType(owningClass, position, wildcardType,
+                    "wildcards are not supported in this position");
+        }
+
+        Type[] lowerBounds = wildcardType.getLowerBounds();
+        if (lowerBounds.length > 0) {
+            throw unsupportedGenericType(owningClass, position, wildcardType,
+                    "lower-bounded wildcards are not supported");
+        }
+
+        Type[] upperBounds = wildcardType.getUpperBounds();
+        if (upperBounds.length != 1) {
+            throw unsupportedGenericType(owningClass, position, wildcardType,
+                    "wildcards must declare exactly one upper bound");
+        }
+
+        Type upperBound = upperBounds[0];
+        if (Object.class.equals(upperBound)) {
+            throw unsupportedGenericType(owningClass, position, wildcardType,
+                    "unbounded wildcards and '? extends Object' are not supported");
+        }
+
+        return normalizeSupportedTypeArgument(upperBound, position, owningClass);
+    }
+
+    private static AnnotatedType forTypeArgument(AnnotatedType parent, Type childType) {
+        if (parent == null) {
+            return new AnnotatedType(null, childType, null);
+        }
+        return new AnnotatedType(parent.binConfig, childType, parent.annotations);
+    }
+
+    private static AerospikeException unsupportedGenericType(Class<?> owningClass, GenericPosition position, Type type, String reason) {
+        return new AerospikeException(String.format(
+                "Unsupported generic declaration for %s %s '%s': %s",
+                owningClass.getName(), position.description, typeName(type), reason));
+    }
+
+    private static String typeName(Type type) {
+        return type == null ? "null" : type.getTypeName();
+    }
+
     public static TypeMapper getMapper(Class<?> clazz, AnnotatedType type, MappingEngine engine) {
         return getMapper(clazz, type, engine, false);
     }
@@ -316,50 +422,36 @@ public class TypeUtils {
     }
 
     public static int returnTypeToListReturnType(ReturnType returnType) {
-        switch (returnType) {
-            case DEFAULT:
-            case ELEMENTS:
-                return ListReturnType.VALUE;
-            case COUNT:
-                return ListReturnType.COUNT;
-            case INDEX:
-                return ListReturnType.INDEX;
-            case NONE:
-            default:
-                return ListReturnType.NONE;
-        }
+        return switch (returnType) {
+            case DEFAULT, ELEMENTS -> ListReturnType.VALUE;
+            case COUNT -> ListReturnType.COUNT;
+            case INDEX -> ListReturnType.INDEX;
+            case NONE -> ListReturnType.NONE;
+        };
     }
 
     public static int returnTypeToMapReturnType(ReturnType returnType) {
-        switch (returnType) {
-            case DEFAULT:
-            case ELEMENTS:
-                return MapReturnType.KEY_VALUE;
-            case COUNT:
-                return MapReturnType.COUNT;
-            case INDEX:
-                return MapReturnType.INDEX;
-            case NONE:
-            default:
-                return MapReturnType.NONE;
-        }
+        return switch (returnType) {
+            case DEFAULT, ELEMENTS -> MapReturnType.KEY_VALUE;
+            case COUNT -> MapReturnType.COUNT;
+            case INDEX -> MapReturnType.INDEX;
+            case NONE -> MapReturnType.NONE;
+        };
     }
 
     public static class AnnotatedType {
 
         private static final AnnotatedType defaultAnnotatedType = new AnnotatedType(null, null, null);
         private final Annotation[] annotations;
+        private final Type type;
         private final ParameterizedType parameterizedType;
         private final BinConfig binConfig;
 
         private AnnotatedType(BinConfig binConfig, Type type, Annotation[] annotations) {
             this.binConfig = binConfig;
             this.annotations = annotations;
-            if (type instanceof ParameterizedType) {
-                this.parameterizedType = (ParameterizedType) type;
-            } else {
-                this.parameterizedType = null;
-            }
+            this.type = type;
+            this.parameterizedType = type instanceof ParameterizedType parameterizedType ? parameterizedType : null;
         }
 
         public AnnotatedType(ClassConfig config, Field field) {
@@ -382,6 +474,10 @@ public class TypeUtils {
             return binConfig;
         }
 
+        public Type getType() {
+            return type;
+        }
+
         public ParameterizedType getParameterizedType() {
             return parameterizedType;
         }
@@ -390,14 +486,13 @@ public class TypeUtils {
             return parameterizedType != null;
         }
 
-        @SuppressWarnings("unchecked")
         public <T> T getAnnotation(Class<T> clazz) {
             if (this.annotations == null) {
                 return null;
             }
             for (Annotation annotation : this.annotations) {
                 if (annotation.annotationType().equals(clazz)) {
-                    return (T) annotation;
+                    return clazz.cast(annotation);
                 }
             }
             return null;

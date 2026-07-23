@@ -141,7 +141,8 @@ public class ObjectReferenceMapper extends ObjectMapper {
             if (typeName.startsWith(ClassCacheEntry.TYPE_PREFIX)) {
                 typeName = typeName.substring(ClassCacheEntry.TYPE_PREFIX.length());
             }
-            classToUse = ClassCache.getInstance().getCacheEntryFromStoredName(typeName);
+            classToUse = ClassCache.getInstance().resolveTypeIdentifier(typeName, engine,
+                    referencedClass.getUnderlyingClass());
         }
         return new ResolvedReference(classToUse, key);
     }
