@@ -29,6 +29,7 @@
         <maven-central-publishing-plugin.version>0.10.0</maven-central-publishing-plugin.version>
         <jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
         <aerospike-client-sdk.version>0.9.0-alpha.2</aerospike-client-sdk.version>
+        <slf4j.version>2.0.18</slf4j.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <snakeyaml.version>2.6</snakeyaml.version>
         <jackson-databind.version>2.21.2</jackson-databind.version>
@@ -84,6 +85,12 @@
 		    <artifactId>aerospike-client-sdk</artifactId>
 		    <version>${aerospike-client-sdk.version}</version>
 		</dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
 		<dependency>
@@ -119,6 +126,13 @@
 			<version>${junit-jupiter.version}</version>
 			<scope>test</scope>
 		</dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.6.1</version>
+            <scope>test</scope>
+        </dependency>
 	</dependencies>
 	<build>
 		<plugins>

@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.mapper.annotations.AerospikeRecord;
@@ -28,6 +30,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
+    private static final Logger log = LoggerFactory.getLogger("behavior");
     private final T mapper;
     private List<Class<?>> classesToPreload = null;
 
@@ -189,8 +192,7 @@ public abstract class AbstractBuilder<T extends IBaseAeroMapper> {
                 }
             } catch (RuntimeException re) {
                 if (allowsInvalid) {
-                    System.getLogger(AbstractBuilder.class.getName())
-                            .log(System.Logger.Level.WARNING, "Ignoring issue with configuration: " + re.getMessage());
+                    log.warn("Ignoring issue with configuration: {}", re.getMessage());
                 } else {
                     throw re;
                 }
