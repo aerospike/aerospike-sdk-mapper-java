@@ -199,8 +199,8 @@ public class MappingConverter {
                 try (RecordStream stream = session.query(keyList).execute()) {
                     while (stream.hasNext()) {
                         RecordResult rr = stream.next();
-                        if (rr.isOk() && rr.recordOrNull() != null) {
-                            recordMap.put(rr.key(), rr.recordOrNull());
+                        if (rr.isOk() && rr.getRecord() != null) {
+                            recordMap.put(rr.getKey(), rr.getRecord());
                         }
                     }
                 }

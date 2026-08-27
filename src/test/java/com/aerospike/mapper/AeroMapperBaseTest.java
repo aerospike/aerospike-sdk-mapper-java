@@ -54,7 +54,7 @@ public abstract class AeroMapperBaseTest {
     protected Record readRawRecord(Key key) {
         try (RecordStream stream = session.query(List.of(key)).execute()) {
             RecordResult rr = stream.hasNext() ? stream.next() : null;
-            return (rr != null && rr.isOk()) ? rr.recordOrNull() : null;
+            return (rr != null && rr.isOk()) ? rr.getRecord() : null;
         }
     }
 

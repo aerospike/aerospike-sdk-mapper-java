@@ -30,7 +30,7 @@ public class ReactiveMultiOperation<E> extends AbstractMultiOperation<E, Reactiv
                     if (results == null || results.isEmpty()) {
                         return null;
                     }
-                    Record record = results.get(0).recordOrNull();
+                    Record record = results.get(0).getRecord();
                     return extractResult(record);
                 });
     }

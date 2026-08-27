@@ -45,7 +45,7 @@ public class NonJavaMapperApplication extends ApplicationBase {
         Record record;
         try (RecordStream stream = session.query(List.of(key)).execute()) {
             RecordResult rr = stream.hasNext() ? stream.next() : null;
-            record = (rr != null && rr.isOk()) ? rr.recordOrNull() : null;
+            record = (rr != null && rr.isOk()) ? rr.getRecord() : null;
         }
 
         Customer result = new Customer(record.getString("id"),

@@ -112,8 +112,8 @@ public class ReactiveAeroMapper implements IReactiveAeroMapper {
                 try (RecordStream stream = queryBuilder.execute()) {
                     while (stream.hasNext()) {
                         RecordResult rr = stream.next();
-                        if (rr.isOk() && rr.recordOrNull() != null) {
-                            T object = mappingConverter.convertToObject(clazz, rr.key(), rr.recordOrNull(),
+                        if (rr.isOk() && rr.getRecord() != null) {
+                            T object = mappingConverter.convertToObject(clazz, rr.getKey(), rr.getRecord(),
                                     entry, true, session);
                             publisher.submit(object);
                         }

@@ -47,7 +47,7 @@ public class ReactiveVirtualList<E> extends BaseVirtualList<E> implements IReact
                         return null;
                     }
                     RecordResult first = results.get(0);
-                    return first.recordOrNull();
+                    return first.recordOrThrow();
                 });
     }
 

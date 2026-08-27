@@ -150,7 +150,7 @@ public class AeroMapper implements IAeroMapper {
         Record record;
         try (RecordStream stream = session.query(List.of(key)).execute()) {
             RecordResult rr = stream.hasNext() ? stream.next() : null;
-            record = (rr != null && rr.isOk()) ? rr.recordOrNull() : null;
+            record = (rr != null && rr.isOk()) ? rr.getRecord() : null;
         }
 
         if (record == null) {
@@ -184,8 +184,8 @@ public class AeroMapper implements IAeroMapper {
         try (RecordStream stream = session.query(List.of(keys)).execute()) {
             while (stream.hasNext()) {
                 RecordResult rr = stream.next();
-                if (rr.isOk() && rr.recordOrNull() != null) {
-                    recordMap.put(rr.key(), rr.recordOrNull());
+                if (rr.isOk() && rr.getRecord() != null) {
+                    recordMap.put(rr.getKey(), rr.getRecord());
                 }
             }
         }
@@ -256,10 +256,10 @@ public class AeroMapper implements IAeroMapper {
         try (RecordStream stream = queryBuilder.execute()) {
             while (stream.hasNext()) {
                 RecordResult rr = stream.next();
-                if (!rr.isOk() || rr.recordOrNull() == null) {
+                if (!rr.isOk() || rr.getRecord() == null) {
                     continue;
                 }
-                T object = mappingConverter.convertToObject(clazz, rr.key(), rr.recordOrNull(), entry,
+                T object = mappingConverter.convertToObject(clazz, rr.getKey(), rr.getRecord(), entry,
                         true, session);
                 if (!processor.process(object)) {
                     break;
