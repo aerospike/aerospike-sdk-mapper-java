@@ -25,17 +25,14 @@ public class NonJavaMapperApplication extends ApplicationBase {
         Key key = new Key("test", "customer", Value.get(customer.getCustomerId()));
 
         session.upsert(key)
-                .bins("id", "firstName", "lastName", "dob", "phone", "joinedBank", "vip", "greet")
-                .values(
-                        customer.getCustomerId(),
-                        customer.getFirstName(),
-                        customer.getLastName(),
-                        customer.getDateOfBirth() == null ? null : customer.getDateOfBirth().getTime(),
-                        customer.getPhone(),
-                        customer.getJoinedBank() == null ? null : customer.getJoinedBank().getTime(),
-                        customer.isVip(),
-                        customer.getPreferredSalutation()
-                )
+                .bin("id").setTo(customer.getCustomerId())
+                .bin("firstName").setTo(customer.getFirstName())
+                .bin("lastName").setTo(customer.getLastName())
+                .bin("dob").setTo(customer.getDateOfBirth() == null ? null : customer.getDateOfBirth().getTime())
+                .bin("phone").setTo(customer.getPhone())
+                .bin("joinedBank").setTo(customer.getJoinedBank() == null ? null : customer.getJoinedBank().getTime())
+                .bin("vip").setTo(customer.isVip())
+                .bin("greet").setTo(customer.getPreferredSalutation())
                 .execute()
                 .close();
     }

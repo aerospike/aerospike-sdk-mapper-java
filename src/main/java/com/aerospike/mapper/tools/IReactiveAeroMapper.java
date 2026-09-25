@@ -7,6 +7,7 @@ import com.aerospike.client.sdk.Key;
 import com.aerospike.mapper.tools.virtuallist.ReactiveVirtualList;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
@@ -71,5 +72,12 @@ public interface IReactiveAeroMapper extends IBaseAeroMapper {
      * Create a reactive virtual list using a specified key rather than an existing object.
      */
     <T> ReactiveVirtualList<T> asBackedList(@NotNull Class<?> owningClazz, @NotNull Object key, @NotNull String binName, Class<T> elementClazz);
+
+    /**
+     * Get an immutable map of Java field names to Aerospike bin names for the passed class.
+     * This is a synchronous in-memory metadata lookup. Other sync metadata helpers remain
+     * available through {@link #asMapper()}.
+     */
+    Map<String, String> getBinNames(Class<?> clazz);
 
 }
