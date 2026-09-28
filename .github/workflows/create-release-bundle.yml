@@ -143,7 +143,7 @@ jobs:
           fi
 
       - name: Promoting release bundle to DEV
-        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@8ec712eafbec26c8db8d1183688a5fd806560a95 # v3.5.0
+        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
         with:
           bundle-name: aerospike-sdk-mapper-java
           version: ${{ needs.extract-version.outputs.version }}
