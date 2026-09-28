@@ -105,7 +105,7 @@ jobs:
 
   create-release-bundle:
     needs: [ extract-version, build-sign-deploy ]
-    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@1004088a1b5122b9b71a39b40f619f6b50e78d16
+    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@bb39c4ec073b5693438911e6eefca7782ea53e8d
     with:
       jf-project: ${{ vars.JFROG_PROJECT }}
       jf-build-names: ${{ needs.build-sign-deploy.outputs.jf-build-name }}:${{ needs.build-sign-deploy.outputs.jf-build-id }}
