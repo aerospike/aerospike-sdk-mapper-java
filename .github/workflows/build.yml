@@ -33,7 +33,7 @@ jobs:
           java-version: 21
 
       - name: Set up Aerospike Database
-        uses: aerospike/shared-workflows/.github/actions/setup-aerospike-server@334ad55b790658d549747b0d154407dfc730acca
+        uses: aerospike/shared-workflows/.github/actions/setup-aerospike-server@bb39c4ec073b5693438911e6eefca7782ea53e8d
         with:
           oidc-provider: ${{ secrets.JFROG_OIDC_PROVIDER }}
           oidc-audience: ${{ secrets.JFROG_OIDC_AUDIENCE }}
