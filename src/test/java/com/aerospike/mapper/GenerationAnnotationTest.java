@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.aerospike.client.sdk.AerospikeException;
@@ -14,6 +15,13 @@ import com.aerospike.mapper.tools.AeroMapper;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
 public class GenerationAnnotationTest extends AeroMapperBaseTest {
+
+    @BeforeEach
+    public void setup() {
+        truncateSet(NAMESPACE, "generationTest");
+        truncateSet(NAMESPACE, "generationTestInteger");
+        truncateSet(NAMESPACE, "generationTestMethods");
+    }
 
     @AerospikeRecord(namespace = NAMESPACE, set = "generationTest")
     public static class GenerationEntity {

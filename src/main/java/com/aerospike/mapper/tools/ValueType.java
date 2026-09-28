@@ -66,6 +66,10 @@ public abstract class ValueType {
         return annotatedType;
     }
 
+    public String getFieldName() {
+        return null;
+    }
+
     public static class FieldValue extends ValueType {
         private final Field field;
 
@@ -112,6 +116,11 @@ public abstract class ValueType {
         }
 
         @Override
+        public String getFieldName() {
+            return this.field.getName();
+        }
+
+        @Override
         public String toString() {
             return String.format("Value(Field): %s (%s)", this.field.getName(), this.field.getType().getSimpleName());
         }
@@ -119,10 +128,16 @@ public abstract class ValueType {
 
     public static class MethodValue extends ValueType {
         private final PropertyDefinition property;
+        private final String fieldName;
 
         public MethodValue(PropertyDefinition property, TypeMapper typeMapper, AnnotatedType annotatedType) {
+            this(property, typeMapper, annotatedType, null);
+        }
+
+        public MethodValue(PropertyDefinition property, TypeMapper typeMapper, AnnotatedType annotatedType, String fieldName) {
             super(typeMapper, annotatedType);
             this.property = property;
+            this.fieldName = fieldName;
         }
 
         @Override
@@ -201,6 +216,11 @@ public abstract class ValueType {
         @Override
         public Annotation[] getAnnotations() {
             return this.property.getAnnotations();
+        }
+
+        @Override
+        public String getFieldName() {
+            return this.fieldName;
         }
 
         @Override

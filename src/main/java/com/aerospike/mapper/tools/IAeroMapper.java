@@ -1,6 +1,7 @@
 package com.aerospike.mapper.tools;
 
 import java.util.List;
+import java.util.Map;
 import jakarta.validation.constraints.NotNull;
 
 import com.aerospike.client.sdk.AerospikeException;
@@ -195,6 +196,15 @@ public interface IAeroMapper extends IBaseAeroMapper {
      * Get the set associated with the passed class.
      */
     String getSet(Class<?> clazz);
+
+    /**
+     * Get an immutable map of Java field names to Aerospike bin names for the passed class.
+     * Superclass fields are included; subclass fields win when field names clash.
+     *
+     * Load this map once and keep the returned bin names as constants when mixing mapper usage
+     * with ordinary SDK bin operations.
+     */
+    Map<String, String> getBinNames(Class<?> clazz);
 
     /**
      * Get the primary id associated with the passed object.

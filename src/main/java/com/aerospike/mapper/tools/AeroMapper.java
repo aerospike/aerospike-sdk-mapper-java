@@ -1,7 +1,9 @@
 package com.aerospike.mapper.tools;
 
 import com.aerospike.client.sdk.AerospikeException;
+import com.aerospike.client.sdk.Bin;
 import com.aerospike.client.sdk.Key;
+import com.aerospike.client.sdk.Operation;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordMappingFactory;
 import com.aerospike.client.sdk.RecordResult;
@@ -95,21 +97,24 @@ public class AeroMapper implements IAeroMapper {
             case UPSERT -> session.upsert(key);
         };
 
-        var binsBuilder = builder.bins(names[0],
-                names.length > 1 ? java.util.Arrays.copyOfRange(names, 1, names.length) : new String[0]);
-        binsBuilder.values(values);
+        Operation[] operations = new Operation[names.length];
+        for (int j = 0; j < names.length; j++) {
+            Bin bin = values[j] == null ? Bin.asNull(names[j]) : new Bin(names[j], Value.get(values[j]));
+            operations[j] = Operation.put(bin);
+        }
+        builder.appendOperations(operations);
 
         Integer ttl = entry.getTtl();
         if (ttl != null) {
-            binsBuilder.expireRecordAfterSeconds(ttl);
+            builder.expireRecordAfterSeconds(ttl);
         }
 
         Integer generationValue = entry.getGenerationValue(object);
         if (generationValue != null && generationValue > 0) {
-            binsBuilder.ensureGenerationIs(generationValue);
+            builder.ensureGenerationIs(generationValue);
         }
 
-        binsBuilder.execute().close();
+        builder.execute().close();
     }
 
     @Override
@@ -329,6 +334,12 @@ public class AeroMapper implements IAeroMapper {
     public String getSet(Class<?> clazz) {
         ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(clazz, this);
         return entry == null ? null : entry.getSetName();
+    }
+
+    @Override
+    public Map<String, String> getBinNames(Class<?> clazz) {
+        ClassCacheEntry<?> entry = ClassCache.getInstance().loadClass(clazz, this);
+        return entry == null ? null : entry.getBinNames();
     }
 
     @Override

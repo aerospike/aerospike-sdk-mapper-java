@@ -8,8 +8,10 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +63,7 @@ public class ClassCacheEntry<T> {
     private boolean keyAsBin = true;
     private ValueType generationField = null;
     private final TreeMap<String, ValueType> values = new TreeMap<>();
+    private Map<String, String> binNames = Collections.emptyMap();
     private ClassCacheEntry<?> superClazz;
     private int binCount;
     private final IBaseAeroMapper mapper;
@@ -127,6 +130,7 @@ public class ClassCacheEntry<T> {
         this.superClazz = ClassCache.getInstance().loadClass(this.clazz.getSuperclass(), this.mapper, !this.mapAll);
         this.binCount = this.values.size() + (superClazz != null ? superClazz.binCount : 0);
         this.formOrdinalsFromValues();
+        this.formBinNamesFromValues();
         Method factoryConstructorMethod = findConstructorFactoryMethod();
         if (!this.clazz.isInterface()) {
             if (factoryConstructorMethod == null) {
@@ -322,6 +326,25 @@ public class ClassCacheEntry<T> {
             }
         }
         return null;
+    }
+
+    private void formBinNamesFromValues() {
+        Map<String, String> resolvedBinNames = new LinkedHashMap<>();
+        ClassCacheEntry<?> thisClass = this;
+        while (thisClass != null) {
+            for (Map.Entry<String, ValueType> thisValueEntry : thisClass.values.entrySet()) {
+                String binName = thisValueEntry.getKey();
+                if (binName.equals(thisClass.keyName) && !thisClass.keyAsBin) {
+                    continue;
+                }
+                String fieldName = thisValueEntry.getValue().getFieldName();
+                if (fieldName != null) {
+                    resolvedBinNames.putIfAbsent(fieldName, binName);
+                }
+            }
+            thisClass = thisClass.superClazz;
+        }
+        this.binNames = Collections.unmodifiableMap(resolvedBinNames);
     }
 
     private void formOrdinalsFromValues() {
@@ -863,7 +886,7 @@ public class ClassCacheEntry<T> {
         property.setSetter(setter);
         property.validate(clazz.getName(), config, false);
 
-        ValueType value = new ValueType.MethodValue(property, typeMapper, annotatedType);
+        ValueType value = new ValueType.MethodValue(property, typeMapper, annotatedType, fieldName);
         values.put(binName, value);
     }
 
@@ -916,6 +939,10 @@ public class ClassCacheEntry<T> {
 
     public String getSetName() {
         return setName;
+    }
+
+    public Map<String, String> getBinNames() {
+        return this.binNames;
     }
 
     public Integer getTtl() {

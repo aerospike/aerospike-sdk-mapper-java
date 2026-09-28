@@ -45,7 +45,7 @@ public class ReactiveQueryTest extends ReactiveAeroMapperBaseTest {
     }
 
     private ReactiveAeroMapper populate() throws Exception {
-        // TODO: Adapt truncate for SDK - needs cluster/session truncate API
+        truncateSet("test", "testScan");
         ReactiveAeroMapper reactiveMapper = new ReactiveAeroMapper.Builder(session).build();
         reactiveMapper.save(new A(1, "Tim", 312)).get();
         reactiveMapper.save(new A(2, "Bob", 44)).get();

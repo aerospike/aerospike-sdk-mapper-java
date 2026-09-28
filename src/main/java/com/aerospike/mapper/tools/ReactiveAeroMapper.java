@@ -140,6 +140,11 @@ public class ReactiveAeroMapper implements IReactiveAeroMapper {
     }
 
     @Override
+    public Map<String, String> getBinNames(Class<?> clazz) {
+        return this.syncMapper.getBinNames(clazz);
+    }
+
+    @Override
     public Session getSession() {
         return this.session;
     }
