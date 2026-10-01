@@ -12,10 +12,10 @@ This project is a work in progress. The current mapper version is `1.0.0-SNAPSHO
 requires:
 
 - Java 21
-- `com.aerospike:aerospike-client-sdk:0.9.0-alpha.2`
+- The latest state of the Java SDK `stage` branch installed locally as `com.aerospike:aerospike-client-sdk:0.9.0-alpha.2`
 - An Aerospike server for integration tests and database operations
 
-The mapper and its SDK dependency are pre-release artifacts. Do not assume that either
+The mapper and its SDK dependency are pre-release artifacts. It is not assumed that either
 artifact is available from Maven Central.
 
 ## Installation
