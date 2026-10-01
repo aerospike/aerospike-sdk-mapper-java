@@ -1,9 +1,9 @@
 # Aerospike SDK Mapper Java
 
-The Aerospike SDK Mapper maps annotated or externally configured Java POJOs to
+The Aerospike Java SDK Object Mapper maps annotated or externally configured Java POJOs to
 Aerospike records and back. It is built on the
-[Aerospike Java SDK](https://github.com/aerospike/aerospike-client-java-sdk) `Session`
-API and provides object CRUD, batch reads, scans, AEL queries, typed SDK interoperability,
+[Aerospike Java SDK](https://github.com/aerospike/aerospike-client-java-sdk), integrates through Session API
+and provides object CRUD, batch reads, scans, AEL queries, typed SDK interoperability,
 references, embeds, and database-backed virtual lists.
 
 ## Status and requirements
