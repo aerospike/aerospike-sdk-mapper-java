@@ -9,16 +9,31 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.DataSet;
+import com.aerospike.client.sdk.query.IndexType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.AeroMapper;
 
 public class QueryTest extends AeroMapperBaseTest {
+    private static final DataSet DATA_SET = DataSet.of("test", "testScan");
+    private static final String AGE_INDEX = "mapper_query_test_age_idx";
+
+    @BeforeAll
+    public static void createAgeIndex() {
+        recreateIndex(DATA_SET, AGE_INDEX, "age", IndexType.INTEGER);
+    }
+
+    @AfterAll
+    public static void dropAgeIndex() {
+        dropIndexIfPresent(DATA_SET, AGE_INDEX);
+    }
+
     @AerospikeRecord(namespace = "test", set = "testScan")
     public static class A {
         @AerospikeKey
@@ -92,12 +107,10 @@ public class QueryTest extends AeroMapperBaseTest {
     }};
 
     private AeroMapper populate() {
-        session.truncate(DataSet.of("test", "testScan"));
+        assumeAelSupported();
+        session.truncate(DATA_SET);
         AeroMapper mapper = new AeroMapper.Builder(session).build();
         mapper.save(data.toArray());
-
-        // TODO: Adapt for SDK - index creation
-        // Original: client.createIndex(null, "test", "testScan", "age_idx", "age", IndexType.NUMERIC).waitTillComplete();
         return mapper;
     }
 

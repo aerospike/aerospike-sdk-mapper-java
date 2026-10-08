@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           egress-policy: audit
 
@@ -39,10 +39,10 @@ jobs:
 
   build-sign-deploy:
     needs: extract-version
-    uses: aerospike/shared-workflows/.github/workflows/reusable_artifacts-cicd.yaml@1004088a1b5122b9b71a39b40f619f6b50e78d16
+    uses: aerospike/shared-workflows/.github/workflows/reusable_artifacts-cicd.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
     with:
       gh-artifact-directory: build
-      gh-workflows-ref: 1004088a1b5122b9b71a39b40f619f6b50e78d16
+      gh-workflows-ref: b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860
       jf-build-name: aerospike-sdk-mapper-java
       jf-project: ${{ vars.JFROG_PROJECT }}
       oidc-audience: ${{ vars.OIDC_AUDIENCE }}
@@ -105,12 +105,12 @@ jobs:
 
   create-release-bundle:
     needs: [ extract-version, build-sign-deploy ]
-    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@1004088a1b5122b9b71a39b40f619f6b50e78d16
+    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
     with:
       jf-project: ${{ vars.JFROG_PROJECT }}
       jf-build-names: ${{ needs.build-sign-deploy.outputs.jf-build-name }}:${{ needs.build-sign-deploy.outputs.jf-build-id }}
       jf-bundle-name: aerospike-sdk-mapper-java
-      gh-workflows-ref: 1004088a1b5122b9b71a39b40f619f6b50e78d16
+      gh-workflows-ref: b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860
       version: ${{ needs.extract-version.outputs.version }}
       oidc-provider-name: ${{ vars.OIDC_PROVIDER_NAME }}
       oidc-audience: ${{ vars.OIDC_AUDIENCE }}
@@ -122,12 +122,12 @@ jobs:
     runs-on: ${{ vars.BUILD_CONTAINER_DISTRO_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           egress-policy: audit
 
       - name: Setup JFrog CLI
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        uses: step-security/setup-jfrog-cli@f67dd6dcfe5fab8d1ebd695c456631275009a39d # v5.2.0
         env:
           JF_URL: ${{ vars.JFROG_PLATFORM_URL }}
           JF_PROJECT: ${{ vars.JFROG_PROJECT }}
@@ -143,7 +143,7 @@ jobs:
           fi
 
       - name: Promoting release bundle to DEV
-        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@8ec712eafbec26c8db8d1183688a5fd806560a95 # v3.5.0
+        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
         with:
           bundle-name: aerospike-sdk-mapper-java
           version: ${{ needs.extract-version.outputs.version }}

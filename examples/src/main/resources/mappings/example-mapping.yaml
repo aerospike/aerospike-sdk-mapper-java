@@ -1,0 +1,16 @@
+# @start region="yaml-configuration"
+---
+classes:
+  # Use the binary name (with $) for this nested, otherwise unannotated Java class.
+  - class: com.aerospike.mapper.configuration.ConfigurationExample$YamlPerson
+    # External configuration uses literal namespace and set values.
+    namespace: test
+    set: sdk_mapper_examples_yaml
+    # The key section identifies the field used as the Aerospike user key.
+    key:
+      field: id
+    bins:
+      # Store Java field "name" in a differently named Aerospike bin.
+      - field: name
+        name: fullName
+# @end region="yaml-configuration"

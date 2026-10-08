@@ -1,18 +1,23 @@
 package com.aerospike.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.List;
 
 import com.aerospike.client.sdk.Cluster;
 import com.aerospike.client.sdk.ClusterDefinition;
 import com.aerospike.client.sdk.DataSet;
+import com.aerospike.client.sdk.AerospikeException;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordResult;
 import com.aerospike.client.sdk.RecordStream;
+import com.aerospike.client.sdk.ResultCode;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.policy.Behavior;
+import com.aerospike.client.sdk.query.IndexCollectionType;
+import com.aerospike.client.sdk.query.IndexType;
 import com.aerospike.mapper.tools.ClassCache;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +54,29 @@ public abstract class AeroMapperBaseTest {
 
     protected static void truncateSet(String namespace, String setName) {
         session.truncate(DataSet.of(namespace, setName));
+    }
+
+    protected static void recreateIndex(
+            DataSet dataSet, String indexName, String binName, IndexType indexType) {
+        dropIndexIfPresent(dataSet, indexName);
+        session.createIndex(dataSet, indexName, binName, indexType, IndexCollectionType.DEFAULT)
+                .waitTillComplete();
+    }
+
+    protected static void dropIndexIfPresent(DataSet dataSet, String indexName) {
+        try {
+            session.dropIndex(dataSet, indexName).waitTillComplete();
+        } catch (AerospikeException e) {
+            if (e.getResultCode() != ResultCode.INDEX_NOTFOUND) {
+                throw e;
+            }
+        }
+    }
+
+    protected static void assumeAelSupported() {
+        assumeTrue(cluster.supportsAel(), () ->
+                "AEL requires Aerospike Server 8.2.0+; connected server version is "
+                        + cluster.getServerVersion());
     }
 
     protected Record readRawRecord(Key key) {
