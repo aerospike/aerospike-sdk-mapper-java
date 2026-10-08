@@ -8,7 +8,6 @@ contain them.
 ## Prerequisites
 
 - Java 21
-- The matching `com.aerospike:aerospike-client-sdk` artifact installed locally
 - A live Aerospike server (defaults: `localhost:3000`, namespace `test`)
 
 ## Catalog

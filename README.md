@@ -1,37 +1,19 @@
-# Aerospike SDK Java Object Mapper
+# Aerospike Java SDK Object Mapper
 
-The Aerospike Java SDK Object Mapper maps annotated or externally configured Java POJOs to
-Aerospike records and back. It is built on the
-[Aerospike Java SDK](https://github.com/aerospike/aerospike-client-java-sdk), integrates through Session API
+The Aerospike Java SDK Object Mapper persists annotated or externally configured Java POJOs as
+Aerospike records and reconstructs them on read (reads them back as objects). 
+It is built on the [Aerospike Java SDK](https://github.com/aerospike/aerospike-client-java-sdk), integrates through Session API
 and provides object CRUD, batch reads, scans, AEL queries, typed SDK interoperability,
 references, embeds, and database-backed virtual lists.
 
-## Status and requirements
-
-This project is a work in progress. The current mapper version is `1.0.0-SNAPSHOT` and
-requires:
+## Requirements
 
 - Java 21
-- The latest state of the Java SDK `stage` branch installed locally as `com.aerospike:aerospike-client-sdk:0.9.0-alpha.2`
-- An Aerospike server for integration tests and database operations
-
-The mapper and its SDK dependency are pre-release artifacts. It is not assumed that either
-artifact is available from Maven Central.
+- Aerospike Server version >= 8.2.0.0
 
 ## Installation
 
-Until the required artifacts are published, install a matching checkout of the Java SDK
-and then this project into your local Maven repository:
-
-```shell
-cd ~/Repos/aerospike-client-java-sdk
-mvn install
-
-cd ~/Repos/aerospike-sdk-mapper-java
-mvn install
-```
-
-Applications can then use the locally installed mapper:
+Add the mapper dependency to your application:
 
 ```xml
 <dependency>
@@ -39,6 +21,12 @@ Applications can then use the locally installed mapper:
     <artifactId>aerospike-sdk-mapper-java</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
+```
+
+When building this repository from source, run the normal Maven build:
+
+```shell
+mvn install
 ```
 
 ## Table of contents
@@ -754,9 +742,7 @@ levels, and sinks there.
 
 - This API is based on the SDK `Cluster`, `Session`, typed dataset, and AEL APIs. Legacy
   Java client policy and query APIs are intentionally not exposed.
-- The mapper is still pre-release; verify mappings and stored representations against
-  the version used by your application before deploying schema changes.
 - Runnable examples live under `examples/src/main/java` and
-  `examples/src/test/java`; the latter also contains the opt-in support tests and the
-  migrated legacy scenarios. Ordinary Maven test runs neither compile nor execute this
-  profile-gated catalog.
+  `examples/src/test/java`; the latter also contains support tests and migrated legacy
+  scenarios. Ordinary Maven test runs compile and execute this catalog, with AEL-based
+  live examples skipped on Aerospike Server versions older than 8.2.
