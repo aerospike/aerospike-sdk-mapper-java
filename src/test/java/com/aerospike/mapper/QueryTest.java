@@ -107,6 +107,7 @@ public class QueryTest extends AeroMapperBaseTest {
     }};
 
     private AeroMapper populate() {
+        assumeAelSupported();
         session.truncate(DATA_SET);
         AeroMapper mapper = new AeroMapper.Builder(session).build();
         mapper.save(data.toArray());

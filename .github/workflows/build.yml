@@ -14,7 +14,14 @@ on:
 
 jobs:
   build:
+    name: Build (Aerospike ${{ matrix.server-tag }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        server-tag:
+          - 8.1.2.5
+          - 8.2.0.0
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -37,6 +44,7 @@ jobs:
         with:
           oidc-provider: ${{ secrets.JFROG_OIDC_PROVIDER }}
           oidc-audience: ${{ secrets.JFROG_OIDC_AUDIENCE }}
+          server-tag: ${{ matrix.server-tag }}
 
       # See: https://github.com/actions/cache/blob/master/examples.md#java---maven
       - name: Cache local Maven repository
@@ -94,6 +102,7 @@ jobs:
         with:
           oidc-provider: ${{ secrets.JFROG_OIDC_PROVIDER }}
           oidc-audience: ${{ secrets.JFROG_OIDC_AUDIENCE }}
+          server-tag: 8.2.0.0
 
       - name: Run live examples
         shell: bash

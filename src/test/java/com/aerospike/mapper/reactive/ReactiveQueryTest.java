@@ -89,6 +89,7 @@ public class ReactiveQueryTest extends ReactiveAeroMapperBaseTest {
 
     @Test
     public void queryTest() throws Exception {
+        assumeAelSupported();
         ReactiveAeroMapper reactiveMapper = populate();
         IAeroMapper syncMapper = reactiveMapper.asMapper();
         // TODO: Adapt for SDK - Filter.range replaced by AEL expression; verify AEL syntax

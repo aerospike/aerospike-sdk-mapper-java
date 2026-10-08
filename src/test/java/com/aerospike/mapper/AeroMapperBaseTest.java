@@ -1,6 +1,7 @@
 package com.aerospike.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.List;
 
@@ -70,6 +71,12 @@ public abstract class AeroMapperBaseTest {
                 throw e;
             }
         }
+    }
+
+    protected static void assumeAelSupported() {
+        assumeTrue(cluster.supportsAel(), () ->
+                "AEL requires Aerospike Server 8.2.0+; connected server version is "
+                        + cluster.getServerVersion());
     }
 
     protected Record readRawRecord(Key key) {

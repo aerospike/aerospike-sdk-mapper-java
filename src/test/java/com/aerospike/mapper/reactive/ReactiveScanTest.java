@@ -79,6 +79,7 @@ public class ReactiveScanTest extends ReactiveAeroMapperBaseTest {
 
     @Test
     public void scanTestWithFilter() throws Exception {
+        assumeAelSupported();
         ReactiveAeroMapper reactiveMapper = populate();
         IAeroMapper syncMapper = reactiveMapper.asMapper();
         // TODO: Adapt for SDK - ScanPolicy with filterExp replaced by AEL query expression
