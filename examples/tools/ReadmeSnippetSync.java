@@ -84,7 +84,8 @@ public final class ReadmeSnippetSync {
             return 0;
         }
         if (!write) {
-            System.err.println("README snippets are stale; run with --write");
+            System.err.println("README snippets are stale; run manually with --write and commit the changes."
+                    + " For command details see /examples/sync_readme");
             return 1;
         }
         Files.writeString(readme, updated, StandardCharsets.UTF_8);

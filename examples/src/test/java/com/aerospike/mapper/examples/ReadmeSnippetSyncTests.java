@@ -27,7 +27,11 @@ class ReadmeSnippetSyncTests {
                 }
                 """, placeholder("sample", "stale"));
 
-        assertNotEquals(0, run(fixture, "--check").code);
+        Result stale = run(fixture, "--check");
+        assertNotEquals(0, stale.code);
+        assertTrue(stale.output.contains(
+                "README snippets are stale; run manually with --write and commit the changes."
+                        + " For command details see /examples/sync_readme"));
         assertEquals(0, run(fixture, "--write").code);
         String written = Files.readString(fixture.readme);
         assertTrue(written.contains("```java\nvoid run() {}\n```"));
