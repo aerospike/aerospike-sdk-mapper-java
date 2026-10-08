@@ -19,7 +19,7 @@ Add the mapper dependency to your application:
 <dependency>
     <groupId>com.aerospike</groupId>
     <artifactId>aerospike-sdk-mapper-java</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version></version> # Use the latest version
 </dependency>
 ```
 
