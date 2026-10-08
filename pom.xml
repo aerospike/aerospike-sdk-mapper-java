@@ -259,7 +259,7 @@
 						<version>${exec-maven-plugin.version}</version>
 						<configuration>
 							<classpathScope>test</classpathScope>
-							<mainClass>com.aerospike.mapper.examples.MapperExamples</mainClass>
+							<mainClass>com.aerospike.mapper.MapperExamples</mainClass>
 						</configuration>
 					</plugin>
 				</plugins>

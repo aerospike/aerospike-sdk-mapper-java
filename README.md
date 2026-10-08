@@ -119,7 +119,7 @@ public static class Person {
 }
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/quickstart/QuickStartExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/quickstart/QuickStartExample.java)
 <!-- example-region:quick-start-model:end -->
 
 Create and close the owning SDK cluster explicitly; the runnable scenario receives the
@@ -158,7 +158,7 @@ mapper.save(saved);
 boolean deleted = mapper.delete(Person.class, "person-1");
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/quickstart/QuickStartExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/quickstart/QuickStartExample.java)
 <!-- example-region:quick-start-crud:end -->
 
 The mapper retains and uses the caller-provided `Session`; it does not own the
@@ -190,7 +190,7 @@ session.update(people.id("person-1"))
         .execute();
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/interop/SdkInteropExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/interop/SdkInteropExample.java)
 <!-- example-region:interop-bin-names:end -->
 
 The returned bin-name map is immutable, includes mapped superclass fields, and respects
@@ -221,7 +221,7 @@ try (TypedRecordStream<Person> records =
 }
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/interop/SdkInteropExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/interop/SdkInteropExample.java)
 <!-- example-region:interop-typed:end -->
 
 Use typed `Session` flows such as `session.query(TypedDataSet)` or
@@ -283,7 +283,7 @@ Person[] people = mapper.read(
         Person.class, new Object[] {"person-1", "missing", "person-2"});
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/quickstart/QuickStartExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/quickstart/QuickStartExample.java)
 <!-- example-region:crud-batch:end -->
 
 > **Partial-write warning:** `save(object, binNames...)` still uses replace semantics.
@@ -326,7 +326,7 @@ mapper.query(Person.class, person -> {
 }, "$.age >= 30 and $.age <= 50");
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/query/ScanAndQueryExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/query/ScanAndQueryExample.java)
 <!-- example-region:scan-query:end -->
 
 The callback overload stops when the processor returns `false`. Query filters are AEL
@@ -381,7 +381,7 @@ public static class Address {
 }
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/relationships/RelationshipsExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/relationships/RelationshipsExample.java)
 <!-- example-region:constructor-mapping:end -->
 
 For generated or externally controlled classes, `factoryClass` and `factoryMethod`
@@ -424,7 +424,7 @@ public static class Person {
 }
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/relationships/RelationshipsExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/relationships/RelationshipsExample.java)
 <!-- example-region:metadata-key:end -->
 
 `storeAsBin = false` requires `sendKey = true`; otherwise the mapper cannot recover the
@@ -475,7 +475,7 @@ Person loaded = mapper.read(Person.class, "person-1");
 Person[] batch = mapper.read(Person.class, new Object[] {"person-1"});
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/relationships/RelationshipsExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/relationships/RelationshipsExample.java)
 <!-- example-region:relationships:end -->
 
 Non-lazy dependencies are resolved in batches where possible. `lazy = true` creates a
@@ -571,7 +571,7 @@ public static AeroMapper moneyMapper(Session session) {
 }
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/configuration/ConfigurationExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/configuration/ConfigurationExample.java)
 <!-- example-region:custom-converter:end -->
 
 Converters are global for their Java type and take precedence over built-in mappers.
@@ -586,7 +586,7 @@ by environment:
 ---
 classes:
   # Use the binary name (with $) for this nested, otherwise unannotated Java class.
-  - class: com.aerospike.mapper.examples.configuration.ConfigurationExample$YamlPerson
+  - class: com.aerospike.mapper.configuration.ConfigurationExample$YamlPerson
     # External configuration uses literal namespace and set values.
     namespace: test
     set: sdk_mapper_examples_yaml
@@ -602,7 +602,7 @@ classes:
 [Region source](examples/src/main/resources/mappings/example-mapping.yaml)
 <!-- example-region:yaml-configuration:end -->
 
-[Complete runnable configuration scenario](examples/src/main/java/com/aerospike/mapper/examples/configuration/ConfigurationExample.java)
+[Complete runnable configuration scenario](examples/src/main/java/com/aerospike/mapper/configuration/ConfigurationExample.java)
 
 The current YAML model supports class settings including `class`, `namespace`, `set`,
 `factoryClass`, `factoryMethod`, `durableDelete`, `mapAll`, `sendKey`, `ttl`,
@@ -631,7 +631,7 @@ AeroMapper codeMapper = new AeroMapper.Builder(session)
         .build();
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/configuration/ConfigurationExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/configuration/ConfigurationExample.java)
 <!-- example-region:code-configuration:end -->
 
 ### Generation checks
@@ -663,7 +663,7 @@ try {
 }
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/generation/OptimisticLockingExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/generation/OptimisticLockingExample.java)
 <!-- example-region:generation-check:end -->
 
 ### Enum field mapping
@@ -696,7 +696,7 @@ List<Item> selected = (List<Item>) items.beginMultiOperation()
         .end();
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/virtuallist/VirtualListOperationsExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/virtuallist/VirtualListOperationsExample.java)
 <!-- example-region:virtual-list:end -->
 
 Virtual-list operations execute through the mapper's session and can combine several
@@ -730,7 +730,7 @@ mapper.update(ada, "age").get(5, TimeUnit.SECONDS);
 Flow.Publisher<Person> publisher = mapper.scan(Person.class);
 ```
 
-[Region source](examples/src/main/java/com/aerospike/mapper/examples/reactive/ReactiveMapperExample.java)
+[Region source](examples/src/main/java/com/aerospike/mapper/reactive/ReactiveMapperExample.java)
 <!-- example-region:reactive-mapper:end -->
 
 CRUD delegates to the synchronous mapper through `CompletableFuture.runAsync` or

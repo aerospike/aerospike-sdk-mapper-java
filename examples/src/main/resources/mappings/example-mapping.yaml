@@ -2,7 +2,7 @@
 ---
 classes:
   # Use the binary name (with $) for this nested, otherwise unannotated Java class.
-  - class: com.aerospike.mapper.examples.configuration.ConfigurationExample$YamlPerson
+  - class: com.aerospike.mapper.configuration.ConfigurationExample$YamlPerson
     # External configuration uses literal namespace and set values.
     namespace: test
     set: sdk_mapper_examples_yaml
