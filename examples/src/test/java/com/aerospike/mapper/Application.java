@@ -5,9 +5,8 @@ import com.aerospike.mapper.model.accounts.Account;
 import com.aerospike.mapper.model.accounts.LoanAccount;
 import com.aerospike.mapper.model.accounts.PortfolioAccount;
 import com.aerospike.mapper.tools.AeroMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
 
 import static com.aerospike.mapper.ExampleAssertions.equal;
 
@@ -22,7 +21,7 @@ import static com.aerospike.mapper.ExampleAssertions.equal;
 public class Application extends ApplicationBase implements RunnableExample {
 
     @Override
-    public void run(ExampleContext context) throws JsonProcessingException {
+    public void run(ExampleContext context) {
         // The catalog owns the Cluster and Session. Copying this body into an
         // application only requires supplying its own Session to the mapper builder.
         AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
@@ -114,7 +113,7 @@ public class Application extends ApplicationBase implements RunnableExample {
             readCustomer = mapper.read(Customer.class, customer.getCustomerId());
             System.out.printf("Customer graph read time: %.3fms%n", (System.nanoTime() - now) / 1000000f);
         }
-        ObjectWriter objectWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
+        ObjectWriter objectWriter = JsonMapper.builder().build().writerWithDefaultPrettyPrinter();
         String readString = objectWriter.writeValueAsString(readCustomer);
         System.out.println(readString);
         String originalObject = objectWriter.writeValueAsString(customer);
