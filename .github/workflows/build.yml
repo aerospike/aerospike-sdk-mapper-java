@@ -39,6 +39,9 @@ jobs:
           distribution: 'temurin'
           java-version: 21
 
+      - name: Check README snippets
+        run: ./examples/sync_readme --check
+
       - name: Set up Aerospike Database
         uses: aerospike/shared-workflows/.github/actions/setup-aerospike-server@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
         with:
@@ -57,81 +60,3 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean test -B -U
-
-  examples:
-    name: Run examples
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
-        with:
-          egress-policy: audit
-
-      # Checkout repo using https://github.com/marketplace/actions/checkout
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: 'temurin'
-          java-version: 21
-
-      # See: https://github.com/actions/cache/blob/master/examples.md#java---maven
-      - name: Cache local Maven repository
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Check README snippets
-        run: ./examples/sync_readme --check
-
-      - name: Run example support tests
-        run: mvn -Pexamples -Dtest='ExampleArgumentsTests,ExampleRegistryTests,ExampleRunnerTests,MapperExamplesTests,ReadmeSnippetSyncTests' test -B -U --no-transfer-progress
-
-      # This matches the existing build job's trusted-PR server setup.
-      # Fork/Dependabot PRs without JFrog OIDC secrets need a public service-image path.
-      - name: Set up Aerospike Database
-        uses: aerospike/shared-workflows/.github/actions/setup-aerospike-server@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
-        with:
-          oidc-provider: ${{ secrets.JFROG_OIDC_PROVIDER }}
-          oidc-audience: ${{ secrets.JFROG_OIDC_AUDIENCE }}
-          server-tag: 8.2.0.0
-
-      - name: Run live examples
-        shell: bash
-        run: |
-          set -euo pipefail
-          MAVEN_ARGS="--batch-mode --no-transfer-progress --update-snapshots" \
-            ./examples/run_examples all --fail-fast 2>&1 | tee examples-live-run.log
-
-      - name: Dump Docker logs on failure
-        if: failure()
-        shell: bash
-        run: |
-          set +e
-          docker ps -a
-          for container in $(docker ps -aq); do
-            echo "::group::docker logs ${container}"
-            docker logs "${container}" 2>&1 || true
-            echo "::endgroup::"
-          done
-
-      - name: Upload example diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: example-diagnostics-${{ github.run_id }}
-          path: |
-            examples-live-run.log
-            target/surefire-reports/**
-            target/failsafe-reports/**
-            *.log
-          if-no-files-found: ignore
-          retention-days: 14

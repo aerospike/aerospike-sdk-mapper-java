@@ -54,7 +54,13 @@ Applications can then use the locally installed mapper:
 
 ## Running examples
 
-The examples can be run with the wrapper script or directly through Maven.
+The examples are part of the normal Maven test source roots. By default, `mvn test`
+compiles the examples, runs their non-live support tests, and runs the live example
+catalog through a JUnit smoke test. The live smoke test skips on Aerospike Server
+versions older than 8.2 because the query example uses AEL.
+
+The same catalog can also be run separately with the wrapper script or directly
+through Maven.
 
 ### Wrapper script
 

@@ -1,8 +1,9 @@
 # Runnable mapper examples
 
-This opt-in catalog exercises the mapper's public API against a live Aerospike server.
-It is kept outside the normal Maven source roots: ordinary `mvn test` does not compile
-or run these examples, and published artifacts do not contain them.
+This catalog exercises the mapper's public API against a live Aerospike server.
+Example sources are part of the normal Maven test source roots so IDE navigation,
+refactoring, and compile checks work out of the box. Published artifacts do not
+contain them.
 
 ## Prerequisites
 
@@ -31,8 +32,21 @@ The registry order is authoritative:
 
 The final six entries preserve the original examples formerly stored in the ordinary
 test source tree. Their source remains under `examples/src/test/java` because they are
-profile-gated illustrative programs, not unit tests; the standalone runner invokes
-them exactly like the scenarios under `examples/src/main/java`.
+illustrative programs reused by the standalone runner, not production sources.
+
+## Default Maven test run
+
+Examples run by default as part of the repository's normal Maven verification:
+
+```shell
+mvn test
+```
+
+That command compiles example sources, runs the non-live support tests, and runs the
+live example catalog through a JUnit smoke test. The live smoke test skips on
+Aerospike Server versions older than 8.2 because the `scan-query` example uses AEL.
+
+## Separate example runs
 
 Run examples from the repository root with the wrapper script:
 
@@ -91,26 +105,24 @@ prose remain hand-maintained; each generated block links to its complete scenari
 
 ## Verification
 
-Compile the opt-in source tree without running tests:
+Run the repository tests and examples:
 
 ```shell
-mvn -Pexamples -DskipTests test-compile
+mvn test
 ```
 
 Run only the non-live support tests:
 
 ```shell
-mvn -Pexamples \
-  -Dtest='ExampleArgumentsTests,ExampleRegistryTests,ExampleRunnerTests,MapperExamplesTests,ReadmeSnippetSyncTests' \
+mvn -Dtest='ExampleArgumentsTests,ExampleRegistryTests,ExampleRunnerTests,MapperExamplesTests,ReadmeSnippetSyncTests' \
   test
 ```
 
-Run every live scenario:
+Run every live scenario manually:
 
 ```shell
 ./examples/run_examples all --fail-fast
 ```
 
 Support tests validate CLI, registry, lifecycle, and snippet synchronization behavior.
-Live examples validate database behavior. The repository's ordinary tests remain a
-separate regression suite.
+Live examples validate database behavior.
