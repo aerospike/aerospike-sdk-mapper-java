@@ -6,8 +6,13 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 
-@AerospikeRecord(namespace = "test", set = "chkbook")
+/**
+ * Demonstrates a composite key exposed through annotated accessor methods.
+ */
+@AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = Checkbook.SET)
 public class Checkbook {
+    public static final String SET = "sdk_mapper_examples_banking_checkbook";
+
     private String acctId;
     private long first;
     private long last;
@@ -51,12 +56,19 @@ public class Checkbook {
         this.issuer = issuer;
     }
 
-    /* The checkbook class does not have a key in it's own right, it uses a composite key */
+    /*
+     * A checkbook does not have one natural scalar identifier. The mapper persists this
+     * stable account/range representation as its key.
+     */
     @AerospikeKey
     public String getKey() {
         return String.format("%s-%d-%d", acctId, first, last);
     }
 
+    /*
+     * Mapper hydration calls the key setter. Parse from the right because account IDs
+     * such as "ACC-1234" legitimately contain dashes of their own.
+     */
     @AerospikeKey(setter = true)
     public void setKey(String key) {
         int index = key.lastIndexOf('-');

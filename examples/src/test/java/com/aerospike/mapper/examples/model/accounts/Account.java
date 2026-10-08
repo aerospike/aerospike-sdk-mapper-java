@@ -14,8 +14,16 @@ import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.examples.model.Address;
 import com.aerospike.mapper.examples.model.Checkbook;
 
-@AerospikeRecord(namespace = "test", set = "account")
+/**
+ * Base banking account mapped as an independent record.
+ *
+ * <p>Several deliberately shortened bin names show that the Java model can remain
+ * descriptive while the persisted schema stays compact.</p>
+ */
+@AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = Account.SET)
 public class Account {
+    public static final String SET = "sdk_mapper_examples_banking_account";
+
     @AerospikeKey
     @AerospikeBin(name = "id")
     private final String accountId;
@@ -29,6 +37,7 @@ public class Account {
     @AerospikeBin(name = "bill")
     private Address billingAddress;
 
+    // Addresses are value objects, so they are embedded rather than saved separately.
     @AerospikeEmbed
     @AerospikeBin(name = "mail")
     private Address mailingAddress;
@@ -51,6 +60,8 @@ public class Account {
     @AerospikeBin(name = "lstLgn")
     private Date lastLogin;
 
+    // Every immutable constructor argument names its persisted bin explicitly. This is
+    // especially important for aliases such as id and custId.
     public Account(@ParamFrom("id") String accountId, @ParamFrom("custId") String customerId, @ParamFrom("title") String title, @ParamFrom("type") AccountType type) {
         super();
         this.accountId = accountId;

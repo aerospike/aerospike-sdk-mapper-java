@@ -1,27 +1,32 @@
 package com.aerospike.mapper.examples;
 
-import com.aerospike.client.sdk.Cluster;
-import com.aerospike.client.sdk.ClusterDefinition;
-import com.aerospike.client.sdk.Session;
-import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.examples.model.Customer;
 import com.aerospike.mapper.tools.AeroMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.aerospike.mapper.examples.ExampleAssertions.equal;
 
-public class JavaMapperApplication extends ApplicationBase {
+/**
+ * Focused mapper version of the customer round trip.
+ *
+ * <p>Run this next to {@link NonJavaMapperApplication} to compare declarative mapper
+ * persistence with the equivalent hand-written SDK bin operations.</p>
+ */
+public class JavaMapperApplication extends ApplicationBase implements RunnableExample {
 
-    public void run() throws JsonProcessingException {
-        Cluster cluster = new ClusterDefinition("127.0.0.1", 3000).connect();
-        Session session = cluster.createSession(Behavior.DEFAULT);
-
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+    @Override
+    public void run(ExampleContext context) throws JsonProcessingException {
+        // Cluster/session lifecycle belongs to MapperExamples; a scenario only consumes
+        // the shared session and must not close it.
+        AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
         Customer customer = createAndPopulateCustomer();
 
         mapper.save(customer);
+
+        // Keep the original repeated reads so the example still displays warm-cache
+        // graph hydration timings.
         Customer customer2 = null;
         for (int i = 0; i < 100; i++) {
             long now = System.nanoTime();
@@ -33,8 +38,6 @@ public class JavaMapperApplication extends ApplicationBase {
         String readString = objectWriter.writeValueAsString(customer2);
         System.out.println(readString);
         String originalObject = objectWriter.writeValueAsString(customer);
-        assertEquals(originalObject, readString);
-
-        cluster.close();
+        equal(originalObject, readString, "mapper customer should round-trip");
     }
 }

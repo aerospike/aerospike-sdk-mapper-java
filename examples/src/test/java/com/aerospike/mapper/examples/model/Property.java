@@ -9,11 +9,19 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 
-@AerospikeRecord(namespace = "test", set = "property")
+/**
+ * A property is saved independently and may be referenced by portfolio and loan
+ * accounts. Its address and valuation history are embedded snapshots.
+ */
+@AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = Property.SET)
 public class Property {
+    public static final String SET = "sdk_mapper_examples_banking_property";
 
     @AerospikeKey
     private final long id;
+
+    // Embedded annotations keep these objects in the same Aerospike record as the
+    // property instead of creating Address or Valuation records.
     @AerospikeEmbed
     private final Address address;
     @AerospikeEmbed

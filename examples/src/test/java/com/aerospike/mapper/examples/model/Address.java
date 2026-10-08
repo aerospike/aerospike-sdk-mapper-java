@@ -5,9 +5,17 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 
-// Addresses are only ever embedded in parent records, so do not need information to map to Aerospike.
+/**
+ * Reusable embedded address value.
+ *
+ * <p>Addresses are never written as top-level records in these examples, so the
+ * record annotation intentionally has no namespace or set. Parent fields decide
+ * whether the value is represented as an embedded map or list.</p>
+ */
 @AerospikeRecord
 public class Address {
+    // The key is useful when Address participates in keyed embedded collections; it
+    // does not imply that Address has an independent Aerospike set.
     @AerospikeKey
     private String line1;
     private String line2;

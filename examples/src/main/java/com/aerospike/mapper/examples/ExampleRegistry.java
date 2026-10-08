@@ -3,6 +3,12 @@ package com.aerospike.mapper.examples;
 import com.aerospike.mapper.examples.configuration.ConfigurationExample;
 import com.aerospike.mapper.examples.generation.OptimisticLockingExample;
 import com.aerospike.mapper.examples.interop.SdkInteropExample;
+import com.aerospike.mapper.examples.model.Branch;
+import com.aerospike.mapper.examples.model.Checkbook;
+import com.aerospike.mapper.examples.model.Customer;
+import com.aerospike.mapper.examples.model.Property;
+import com.aerospike.mapper.examples.model.accounts.Account;
+import com.aerospike.mapper.examples.model.accounts.PortfolioAccount;
 import com.aerospike.mapper.examples.query.ScanAndQueryExample;
 import com.aerospike.mapper.examples.quickstart.QuickStartExample;
 import com.aerospike.mapper.examples.reactive.ReactiveMapperExample;
@@ -38,6 +44,37 @@ public final class ExampleRegistry {
                         new VirtualListOperationsExample(),
                         ExampleFixture.cleanSets(VirtualListOperationsExample.SET)),
                 new ExampleDefinition("reactive", "CompletableFuture and Flow APIs",
-                        new ReactiveMapperExample(), ExampleFixture.cleanSets(ReactiveMapperExample.SET)));
+                        new ReactiveMapperExample(), ExampleFixture.cleanSets(ReactiveMapperExample.SET)),
+                new ExampleDefinition("banking-domain",
+                        "Complex banking graph, inheritance, and composite keys",
+                        new Application(), ExampleFixture.cleanSets(
+                                Customer.SET, Account.SET, PortfolioAccount.SET, Property.SET,
+                                Branch.SET, Checkbook.SET)),
+                new ExampleDefinition("mapper-customer",
+                        "Focused customer round trip through AeroMapper",
+                        new JavaMapperApplication(), ExampleFixture.cleanSets(Customer.SET)),
+                new ExampleDefinition("manual-sdk-customer",
+                        "Equivalent customer round trip with direct SDK bin operations",
+                        new NonJavaMapperApplication(), ExampleFixture.cleanSets(Customer.SET)),
+                new ExampleDefinition("mapping-features",
+                        "Embedding, references, versions, ordinals, and constructors",
+                        new AeroMapperDocExamples(), ExampleFixture.cleanSets(
+                                AeroMapperDocExamples.PRODUCT_SET,
+                                AeroMapperDocExamples.ACCOUNT_SET,
+                                AeroMapperDocExamples.PEOPLE_SET,
+                                AeroMapperDocExamples.VERSIONED_SET,
+                                AeroMapperDocExamples.TRANSACTION_ACCOUNT_SET,
+                                AeroMapperDocExamples.TRANSACTION_SET,
+                                AeroMapperDocExamples.PARENT_SET,
+                                AeroMapperDocExamples.CHILD_SET)),
+                new ExampleDefinition("ad-tech-segments",
+                        "Value-ordered ad segments with expiration and range reads",
+                        new AdTechUseCaseExample(),
+                        ExampleFixture.cleanSets(AdTechUseCaseExample.SET)),
+                new ExampleDefinition("virtual-list-advanced",
+                        "Advanced virtual-list remove, count, and range operations",
+                        new VirtualListExample(), ExampleFixture.cleanSets(
+                                VirtualListExample.ITEM_SET,
+                                VirtualListExample.CONTAINER_SET)));
     }
 }

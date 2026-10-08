@@ -1,14 +1,11 @@
 package com.aerospike.mapper.examples;
 
-import com.aerospike.client.sdk.Cluster;
-import com.aerospike.client.sdk.ClusterDefinition;
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.RecordResult;
 import com.aerospike.client.sdk.RecordStream;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
-import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.examples.model.Customer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,13 +14,22 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.aerospike.mapper.examples.ExampleAssertions.equal;
 
-public class NonJavaMapperApplication extends ApplicationBase {
+/**
+ * Manual SDK counterpart to {@link JavaMapperApplication}.
+ *
+ * <p>The two scenarios intentionally write the same set and bin schema. This version
+ * exposes the repetitive serialization and reconstruction code that {@code AeroMapper}
+ * derives from annotations.</p>
+ */
+public class NonJavaMapperApplication extends ApplicationBase implements RunnableExample {
 
-    private void save(Session session, Customer customer) {
-        Key key = new Key("test", "customer", Value.get(customer.getCustomerId()));
+    private void save(Session session, String namespace, Customer customer) {
+        Key key = new Key(namespace, Customer.SET, Value.get(customer.getCustomerId()));
 
+        // Each Java property is converted into an Aerospike bin explicitly. Dates use
+        // epoch milliseconds so this representation matches the mapper's date codec.
         session.upsert(key)
                 .bin("id").setTo(customer.getCustomerId())
                 .bin("firstName").setTo(customer.getFirstName())
@@ -37,9 +43,12 @@ public class NonJavaMapperApplication extends ApplicationBase {
                 .close();
     }
 
-    private Customer read(Session session, String id) {
-        Key key = new Key("test", "customer", Value.get(id));
+    private Customer read(Session session, String namespace, String id) {
+        Key key = new Key(namespace, Customer.SET, Value.get(id));
         Record record;
+
+        // The SDK query returns a closeable stream of per-key results. This example
+        // reads its single result and reconstructs the domain object by hand.
         try (RecordStream stream = session.query(List.of(key)).execute()) {
             RecordResult rr = stream.hasNext() ? stream.next() : null;
             record = (rr != null && rr.isOk()) ? rr.getRecord() : null;
@@ -60,16 +69,18 @@ public class NonJavaMapperApplication extends ApplicationBase {
         return result;
     }
 
-    public void run() throws JsonProcessingException {
-        Cluster cluster = new ClusterDefinition("127.0.0.1", 3000).connect();
-        Session session = cluster.createSession(Behavior.DEFAULT);
-
+    @Override
+    public void run(ExampleContext context) throws JsonProcessingException {
+        Session session = context.session();
         Customer customer = createAndPopulateCustomer();
-        save(session, customer);
+        save(session, context.namespace(), customer);
+
+        // Retain the original repeated reads for a direct visual comparison with the
+        // mapper scenario. These timings are illustrative, not a benchmark.
         Customer customer2 = null;
         for (int i = 0; i < 100; i++) {
             long now = System.nanoTime();
-            customer2 = read(session, customer.getCustomerId());
+            customer2 = read(session, context.namespace(), customer.getCustomerId());
             System.out.printf("Customer graph read time: %.3fms%n", (System.nanoTime() - now) / 1000000f);
         }
 
@@ -78,8 +89,6 @@ public class NonJavaMapperApplication extends ApplicationBase {
         System.out.println(readString);
         String originalObject = objectWriter.writeValueAsString(customer);
         System.out.println(originalObject);
-        assertEquals(originalObject, readString);
-
-        cluster.close();
+        equal(originalObject, readString, "manual SDK customer should round-trip");
     }
 }

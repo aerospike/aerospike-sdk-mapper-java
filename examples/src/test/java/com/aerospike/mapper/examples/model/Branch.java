@@ -6,8 +6,16 @@ import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 
-@AerospikeRecord(namespace = "test", set = "branch")
+/**
+ * Issuing branch referenced by a checkbook.
+ *
+ * <p>The address is embedded because it belongs to the branch snapshot, while the
+ * branch itself has a key and can be stored independently.</p>
+ */
+@AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = Branch.SET)
 public class Branch {
+    public static final String SET = "sdk_mapper_examples_banking_branch";
+
     @AerospikeKey
     private final String id;
     @AerospikeBin(name = "addr")

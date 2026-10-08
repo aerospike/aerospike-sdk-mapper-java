@@ -14,7 +14,9 @@ class ExampleRegistryTests {
         List<ExampleDefinition> examples = ExampleRegistry.examples();
         assertEquals(List.of(
                 "quick-start", "sdk-interop", "relationships", "configuration",
-                "scan-query", "optimistic-locking", "virtual-list", "reactive"),
+                "scan-query", "optimistic-locking", "virtual-list", "reactive",
+                "banking-domain", "mapper-customer", "manual-sdk-customer",
+                "mapping-features", "ad-tech-segments", "virtual-list-advanced"),
                 examples.stream().map(ExampleDefinition::name).toList());
         assertThrows(UnsupportedOperationException.class,
                 () -> examples.add(examples.getFirst()));

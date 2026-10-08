@@ -11,8 +11,19 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.examples.model.accounts.Account;
 
-@AerospikeRecord(namespace = "test", set = "customer")
+/**
+ * Root of the banking-domain object graph used by the migrated examples.
+ *
+ * <p>The namespace placeholder is resolved from the runner's
+ * {@code aerospike.examples.namespace} system property. Applications that do not need
+ * runtime namespace selection can replace it with a literal namespace.</p>
+ */
+@AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = Customer.SET)
 public class Customer {
+    public static final String SET = "sdk_mapper_examples_banking_customer";
+
+    // The user key is also stored in the compact "id" bin so constructor mapping can
+    // rebuild this immutable field without requiring sendKey=true.
     @AerospikeKey
     @AerospikeBin(name = "id")
     private final String customerId;
@@ -20,10 +31,14 @@ public class Customer {
     private String firstName;
     private String lastName;
 
+    // Embedded values are serialized into the customer record. Address therefore does
+    // not need a namespace or set of its own.
     @AerospikeEmbed
     @AerospikeBin(name = "mail")
     private Address mailingAddress;
 
+    // Account is a top-level mapped type. Without @AerospikeEmbed this list is stored
+    // as references to independently saved account records.
     private List<Account> accounts;
 
     @AerospikeBin(name = "dob")
@@ -34,6 +49,7 @@ public class Customer {
     @AerospikeBin(name = "greet")
     private String preferredSalutation;
 
+    // @ParamFrom makes constructor binding independent of javac's -parameters flag.
     public Customer(@ParamFrom("id") String customerId, @ParamFrom("firstName") String firstName, @ParamFrom("lastName") String lastName) {
         super();
         this.customerId = customerId;

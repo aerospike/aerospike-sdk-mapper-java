@@ -750,6 +750,7 @@ levels, and sinks there.
   Java client policy and query APIs are intentionally not exposed.
 - The mapper is still pre-release; verify mappings and stored representations against
   the version used by your application before deploying schema changes.
-- Runnable examples live under `examples/src/main/java`; opt-in support tests live under
-  `examples/src/test/java`. Ordinary Maven test runs neither compile nor execute this
+- Runnable examples live under `examples/src/main/java` and
+  `examples/src/test/java`; the latter also contains the opt-in support tests and the
+  migrated legacy scenarios. Ordinary Maven test runs neither compile nor execute this
   profile-gated catalog.

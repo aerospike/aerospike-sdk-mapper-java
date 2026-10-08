@@ -1,9 +1,5 @@
 package com.aerospike.mapper.examples;
 
-import com.aerospike.client.sdk.Cluster;
-import com.aerospike.client.sdk.ClusterDefinition;
-import com.aerospike.client.sdk.Session;
-import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.mapper.examples.model.*;
 import com.aerospike.mapper.examples.model.accounts.Account;
 import com.aerospike.mapper.examples.model.accounts.LoanAccount;
@@ -13,16 +9,26 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.aerospike.mapper.examples.ExampleAssertions.equal;
 
-public class Application extends ApplicationBase {
+/**
+ * Full banking-domain graph from the original examples package.
+ *
+ * <p>This deliberately exercises more than a minimal CRUD path: subtype mappings,
+ * embedded addresses and valuations, referenced records, a composite method key, maps,
+ * lists, arrays, enums, and immutable constructor arguments all participate in one
+ * customer round trip.</p>
+ */
+public class Application extends ApplicationBase implements RunnableExample {
 
-    public void run() throws JsonProcessingException {
-        Cluster cluster = new ClusterDefinition("127.0.0.1", 3000).connect();
-        Session session = cluster.createSession(Behavior.DEFAULT);
+    @Override
+    public void run(ExampleContext context) throws JsonProcessingException {
+        // The catalog owns the Cluster and Session. Copying this body into an
+        // application only requires supplying its own Session to the mapper builder.
+        AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
 
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
-
+        // Addresses are embedded values. Reusing the same Java instance here does not
+        // create a separate address record.
         Address mailingAddress = new Address("773 Elm St", "Apt 2", "Grand Junction", "CO", "83451");
         Address billingAddress = new Address("123 Main St", null, "Denver", "CO", "80001");
         Address alternateAddress = new Address("1 Park Road", null, "Miami", "FL", "98531");
@@ -36,6 +42,8 @@ public class Application extends ApplicationBase {
         checkingAccount.getAlternateAddresses().add(mailingAddress);
         checkingAccount.getAlternateAddresses().add(alternateAddress);
 
+        // Checkbooks demonstrate a composite @AerospikeKey assembled by an accessor.
+        // Their issuer is a reference, so the branches are also saved independently.
         Branch issuingBranch = new Branch("Br123", new Address("77 Park Road", null, "Miami", "FL", "98531"), "Miami Central");
         Checkbook checkbook = createAndPopulateCheckbook1(checkingAccount.getAccountId(), issuingBranch);
         checkingAccount.getCheckbooks().put(1, checkbook);
@@ -55,7 +63,10 @@ public class Application extends ApplicationBase {
         mapper.save(savingsAccount);
         customer.getAccounts().add(savingsAccount);
 
-        /* Create a portfolio account for this customer */
+        /*
+         * A portfolio is a mapped Account subtype. Properties are independently
+         * addressable records and are also represented in the portfolio's domain data.
+         */
         Property property1 = createAndPopulateProperty1();
         Property property2 = createAndPopulateProperty2();
         Property property3 = createAndPopulateProperty3();
@@ -73,8 +84,8 @@ public class Application extends ApplicationBase {
         mapper.save(portfolioAccount);
         customer.getAccounts().add(portfolioAccount);
 
-        /* Create a loan account for this customer */
-
+        // LoanAccount rolls up into the base account set and carries its security
+        // property plus loan-specific dates, rate, and interest type.
         LoanAccount loanAccount = createAndPopulateLoanAccount(customer.getCustomerId());
         loanAccount.setBillingAddress(billingAddress);
         loanAccount.getAlternateAddresses().add(mailingAddress);
@@ -92,6 +103,11 @@ public class Application extends ApplicationBase {
         mapper.save(checkbook);
         mapper.save(checkbook2);
 
+        /*
+         * Preserve the original repeated-read loop. It makes mapper cache warm-up and
+         * end-to-end graph hydration visible, but it is illustrative timing rather than
+         * a statistically rigorous benchmark.
+         */
         Customer readCustomer = null;
         for (int i = 0; i < 100; i++) {
             long now = System.nanoTime();
@@ -102,6 +118,6 @@ public class Application extends ApplicationBase {
         String readString = objectWriter.writeValueAsString(readCustomer);
         System.out.println(readString);
         String originalObject = objectWriter.writeValueAsString(customer);
-        assertEquals(originalObject, readString);
+        equal(originalObject, readString, "complete banking graph should round-trip");
     }
 }

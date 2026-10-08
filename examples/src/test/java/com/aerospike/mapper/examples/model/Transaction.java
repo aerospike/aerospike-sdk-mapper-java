@@ -4,6 +4,12 @@ import java.time.Instant;
 
 import com.aerospike.mapper.annotations.AerospikeRecord;
 
+/**
+ * Small embedded transaction model retained from the original example package.
+ *
+ * <p>It is intentionally independent of the runnable scenarios so readers can copy it
+ * as a minimal POJO mapping starting point.</p>
+ */
 @AerospikeRecord
 public class Transaction {
     private long amount;

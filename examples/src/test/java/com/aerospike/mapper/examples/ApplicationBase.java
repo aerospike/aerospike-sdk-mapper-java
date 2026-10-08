@@ -15,7 +15,15 @@ import com.aerospike.mapper.examples.model.accounts.AccountType;
 import com.aerospike.mapper.examples.model.accounts.LoanAccount;
 import com.aerospike.mapper.examples.model.accounts.PortfolioAccount;
 
+/**
+ * Deterministic domain-object factory shared by the banking examples.
+ *
+ * <p>Keeping construction separate lets the runnable scenarios concentrate on mapper
+ * and SDK calls. The original identifiers, values, and relationships are intentionally
+ * retained so readers can compare the migrated behavior with the legacy examples.</p>
+ */
 public class ApplicationBase {
+    /** Builds the customer fields shared by mapper and direct-SDK round trips. */
     protected Customer createAndPopulateCustomer() {
         Customer customer = new Customer("cust1", "Robert", "Smith");
         customer.setDateOfBirth(new Date(new Date().getTime() - TimeUnit.MILLISECONDS.convert(30 * 365, TimeUnit.DAYS)));
@@ -26,6 +34,7 @@ public class ApplicationBase {
         return customer;
     }
 
+    /** Creates a checking account with values covering strings, flags, dates, and maps. */
     protected Account createAndPopulateChecking(String customerId) {
         Account checkingAccount = new Account("ACC-1234", customerId, "Checking Account", AccountType.CHECKING);
         checkingAccount.setBalance(100000);
@@ -38,6 +47,7 @@ public class ApplicationBase {
         return checkingAccount;
     }
 
+    /** First composite-key checkbook and its referenced issuing branch. */
     protected Checkbook createAndPopulateCheckbook1(String accountId, Branch issuingBranch) {
         Checkbook checkbook = new Checkbook(accountId, 1, 100, new Date());
         checkbook.setIssuer(issuingBranch);
@@ -45,6 +55,7 @@ public class ApplicationBase {
         return checkbook;
     }
 
+    /** Second range proves that multiple composite keys can share one account ID. */
     protected Checkbook createAndPopulateCheckbook2(String accountId, Branch issuingBranch) {
         Checkbook checkbook = new Checkbook(accountId, 101, 600, new Date());
         checkbook.setIssuer(issuingBranch);
@@ -52,6 +63,7 @@ public class ApplicationBase {
         return checkbook;
     }
 
+    /** Creates a sparse savings account, including an intentionally null login date. */
     protected Account createAndPopulateSavingsAccount(String customerId) {
         Account savingsAccount = new Account("SVG-999", customerId, "Savings Account", AccountType.SAVINGS);
         savingsAccount.setBalance(31415);
@@ -63,6 +75,7 @@ public class ApplicationBase {
         return savingsAccount;
     }
 
+    /** Builds the subtype that combines arrays, lists, maps, and inherited fields. */
     protected PortfolioAccount createAndPopulatePortfolioAccount(String customerId) {
         PortfolioAccount portfolioAccount = new PortfolioAccount("PFOLIO-12312", customerId, "Portfolio Account", AccountType.PORTFOLIO);
         portfolioAccount.setBalance(314992);
@@ -75,6 +88,7 @@ public class ApplicationBase {
         return portfolioAccount;
     }
 
+    /** Builds the loan subtype with calculated origination and expiration dates. */
     protected LoanAccount createAndPopulateLoanAccount(String customerId) {
         Date originationDate = new Date(new Date().getTime() - TimeUnit.MILLISECONDS.convert(5 * 365, TimeUnit.DAYS));
         Date expirationDate = new Date(originationDate.getTime() + TimeUnit.MILLISECONDS.convert(30 * 365, TimeUnit.DAYS));
@@ -89,10 +103,12 @@ public class ApplicationBase {
         return loanAccount;
     }
 
+    /** Property without valuation history: useful for empty-list round trips. */
     protected Property createAndPopulateProperty1() {
         return new Property(11567723, new Address("888 Yam Road", null, "Chicago", "IL", "55555"), 1977, "Stucco");
     }
 
+    /** Property containing valuations with both present and absent nested addresses. */
     protected Property createAndPopulateProperty2() {
         Property property = new Property(11567724, new Address("333 Bob Jones Street", null, "Seattle", "WA", "23152"), 1955, "Brick");
         property
@@ -101,10 +117,12 @@ public class ApplicationBase {
         return property;
     }
 
+    /** Another empty-history property used by the portfolio list/map pairing. */
     protected Property createAndPopulateProperty3() {
         return new Property(11567725, new Address("14003 Des Moines Blvd", null, "Austin", "TX", "78123"), 2004, "Wood");
     }
 
+    /** Security property with a larger embedded valuation history. */
     protected Property createAndPopulateProperty4() {
         Property property = new Property(8898, new Address("203 S Aneky St", null, "Denver", "CO", "82222-4321"), 1965, "Brick");
         property.addValuation(new Valuation(new Date(), 240000, 5000, "Steve's Valuers", 5647328, null))

@@ -6,6 +6,12 @@ import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 
+/**
+ * Embedded historical valuation.
+ *
+ * <p>The valuer address uses LIST embedding to illustrate positional storage. The
+ * field order is therefore part of the persisted representation.</p>
+ */
 @AerospikeRecord
 public class Valuation {
     private Date date;

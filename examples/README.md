@@ -22,6 +22,17 @@ The registry order is authoritative:
 6. `optimistic-locking` — generation checks
 7. `virtual-list` — server-backed collection operations
 8. `reactive` — `CompletableFuture` and `Flow` APIs
+9. `banking-domain` — complex graph, inherited mappings, and composite keys
+10. `mapper-customer` — focused mapper customer round trip
+11. `manual-sdk-customer` — the same customer schema written with direct SDK calls
+12. `mapping-features` — legacy embedding, references, versions, and ordinals
+13. `ad-tech-segments` — value-ordered segment expiration and range reads
+14. `virtual-list-advanced` — remove, count, and range multi-operations
+
+The final six entries preserve the original examples formerly stored in the ordinary
+test source tree. Their source remains under `examples/src/test/java` because they are
+profile-gated illustrative programs, not unit tests; the standalone runner invokes
+them exactly like the scenarios under `examples/src/main/java`.
 
 Run examples from the repository root with the wrapper script:
 
@@ -53,7 +64,9 @@ supported.
 
 One cluster and session are shared by a selected run. Scenario code receives those
 objects but never creates or closes them. Fixtures own setup and cleanup, keeping the
-copyable application code focused on public mapper and SDK calls.
+copyable application code focused on public mapper and SDK calls. Every migrated
+top-level record uses an `sdk_mapper_examples_*` set and the runtime namespace
+placeholder, so custom namespaces follow the same explicit safety gate.
 
 ## Source regions and README synchronization
 

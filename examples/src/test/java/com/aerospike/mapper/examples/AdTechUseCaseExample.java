@@ -1,6 +1,5 @@
 package com.aerospike.mapper.examples;
 
-import com.aerospike.mapper.AeroMapperBaseTest;
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.tools.AeroMapper;
@@ -12,12 +11,25 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class AdTechUseCaseExample extends AeroMapperBaseTest {
-    @AerospikeRecord(namespace = "test", set = "user")
+import static com.aerospike.mapper.examples.ExampleAssertions.equal;
+
+/**
+ * Advertising-segment use case for value-ordered virtual lists.
+ *
+ * <p>The list lives inside a user record, but updates and range reads execute on the
+ * server without first loading and rewriting the complete user object.</p>
+ */
+public class AdTechUseCaseExample implements RunnableExample {
+    public static final String SET = "sdk_mapper_examples_adtech_users";
+
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = SET)
     public static class User {
         @AerospikeKey
         private final String id;
         private final Date created;
+
+        // MAP/LIST means the outer collection is a key-addressable map while each
+        // Segment value is encoded positionally as a list.
         @AerospikeEmbed(type = EmbedType.MAP, elementType = EmbedType.LIST)
         private final List<Segment> segments;
 
@@ -45,6 +57,9 @@ public class AdTechUseCaseExample extends AeroMapperBaseTest {
     public static class Segment {
         @AerospikeKey
         private String name;
+
+        // VirtualList value-range operations use this ordinal field to order and select
+        // segments by recency.
         @AerospikeOrdinal
         private Date lastSeen;
         @AerospikeBin(name = "partId")
@@ -97,21 +112,26 @@ public class AdTechUseCaseExample extends AeroMapperBaseTest {
         }
     }
 
-    public void adTechUseCase() {
-        AeroMapper mapper = new AeroMapper.Builder(session).build();
+    @Override
+    public void run(ExampleContext context) {
+        AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
 
         User user = new User("User1", new Date(), new ArrayList<>());
         mapper.save(user);
 
-        // Create a virtual list pointing to the users' segments
+        // Bind directly to the persisted segments bin. The Java list in user remains a
+        // normal in-memory list and is not updated by these server-side operations.
         VirtualList<Segment> segments = mapper.asBackedList(user, "segments", Segment.class);
 
-        // Allow the date to be manipulated
+        // Capture one clock value so every sample has a deterministic relative age.
         long timeInMs = new Date().getTime();
 
         Date cutoff = new Date(timeInMs - TimeUnit.MILLISECONDS.convert(30, TimeUnit.DAYS));
 
-        // Insert several segments into the list and remove any older ones
+        /*
+         * The operation chain is sent as one command: append all observations, then
+         * remove values whose ordinal date is older than the 30-day cutoff.
+         */
         segments.beginMultiOperation()
                 .append(new Segment("Sports", new Date(timeInMs - TimeUnit.MILLISECONDS.convert(24, TimeUnit.HOURS)), 1234, 1L))
                 .append(new Segment("Computers", new Date(timeInMs - TimeUnit.MILLISECONDS.convert(36, TimeUnit.HOURS)), 9999, 2L))
@@ -125,12 +145,14 @@ public class AdTechUseCaseExample extends AeroMapperBaseTest {
                 .removeByValueRange(null, new Date[]{cutoff})
                 .end();
 
-        // Now, get any segments in the last 7 days
+        // Query the remaining collection for segments seen during the last seven days.
         Date readCutoff = new Date(timeInMs - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS));
-//		List<Segment> segmentList = (List<Segment>) segments.beginMulti()
-//			.getByValueRange(readCutoff, null)
-//			.end();
         List<Segment> segmentList = segments.getByValueRange(new Date[]{readCutoff}, null, ReturnType.ELEMENTS);
         System.out.println(segmentList);
+
+        // Segment.name is the embedded-map key, so the second "Elecronics" append
+        // replaces the first. The old Hiking entry is removed, and the 170-hour Eating
+        // entry falls just outside the seven-day read window, leaving six results.
+        equal(6, segmentList.size(), "recent segment count");
     }
 }

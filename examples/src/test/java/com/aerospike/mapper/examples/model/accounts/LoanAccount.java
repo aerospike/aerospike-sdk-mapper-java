@@ -8,7 +8,12 @@ import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.examples.model.InterestType;
 import com.aerospike.mapper.examples.model.Property;
 
-// Loan account rolls up under the Account
+/**
+ * Loan-specific fields layered on top of the base account mapping.
+ *
+ * <p>No namespace or set is supplied here, so this subtype rolls up into the
+ * {@link Account} record mapping rather than creating another top-level set.</p>
+ */
 @AerospikeRecord
 public class LoanAccount extends Account {
 

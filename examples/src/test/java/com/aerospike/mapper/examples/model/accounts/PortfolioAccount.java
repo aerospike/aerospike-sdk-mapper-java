@@ -10,8 +10,15 @@ import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.examples.model.Property;
 
-@AerospikeRecord(namespace = "test", set = "portfolio")
+/**
+ * Specialized account with a property portfolio and per-property interest rates.
+ *
+ * <p>The explicit record annotation gives this subtype its own set while retaining the
+ * fields mapped by {@link Account}.</p>
+ */
+@AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = PortfolioAccount.SET)
 public class PortfolioAccount extends Account {
+    public static final String SET = "sdk_mapper_examples_banking_portfolio";
 
     @AerospikeBin(name = "props")
     private final List<Property> properties;

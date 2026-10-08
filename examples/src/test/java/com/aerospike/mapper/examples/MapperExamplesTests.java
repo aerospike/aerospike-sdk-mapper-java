@@ -30,6 +30,8 @@ class MapperExamplesTests {
         assertEquals(0, connections.get());
         assertTrue(capture.out.startsWith("quick-start"));
         assertTrue(capture.out.indexOf("quick-start") < capture.out.indexOf("reactive"));
+        assertTrue(capture.out.indexOf("reactive") < capture.out.indexOf("banking-domain"));
+        assertTrue(capture.out.contains("virtual-list-advanced"));
         assertTrue(capture.err.isEmpty());
     }
 

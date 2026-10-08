@@ -1,8 +1,11 @@
 package com.aerospike.mapper.examples;
 
 import com.aerospike.client.sdk.AerospikeException;
-import com.aerospike.client.sdk.DataSet;
-import com.aerospike.mapper.AeroMapperBaseTest;
+import com.aerospike.client.sdk.Key;
+import com.aerospike.client.sdk.Record;
+import com.aerospike.client.sdk.RecordResult;
+import com.aerospike.client.sdk.RecordStream;
+import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.annotations.*;
 import com.aerospike.mapper.annotations.AerospikeEmbed.EmbedType;
 import com.aerospike.mapper.annotations.AerospikeReference.ReferenceType;
@@ -12,11 +15,28 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static com.aerospike.mapper.examples.ExampleAssertions.equal;
+import static com.aerospike.mapper.examples.ExampleAssertions.expectThrows;
+import static com.aerospike.mapper.examples.ExampleAssertions.require;
 
-public class AeroMapperDocExamples extends AeroMapperBaseTest {
+/**
+ * Collection of the original documentation-sized mapping demonstrations.
+ *
+ * <p>Every public example method is executed by {@link #run(ExampleContext)}. Keeping
+ * the examples together preserves their original copyable shape while the catalog
+ * supplies connection lifecycle and safe set cleanup.</p>
+ */
+public class AeroMapperDocExamples implements RunnableExample {
+    public static final String PRODUCT_SET = "sdk_mapper_examples_docs_product";
+    public static final String ACCOUNT_SET = "sdk_mapper_examples_docs_account";
+    public static final String PEOPLE_SET = "sdk_mapper_examples_docs_people";
+    public static final String VERSIONED_SET = "sdk_mapper_examples_docs_versioned";
+    public static final String TRANSACTION_ACCOUNT_SET = "sdk_mapper_examples_docs_transaction_accounts";
+    public static final String TRANSACTION_SET = "sdk_mapper_examples_docs_transactions";
+    public static final String PARENT_SET = "sdk_mapper_examples_docs_parent";
+    public static final String CHILD_SET = "sdk_mapper_examples_docs_child";
 
-    @AerospikeRecord(namespace = "test", set = "product")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = PRODUCT_SET)
     public static class Product {
         public String productId;
         public int version;
@@ -24,7 +44,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         public Date createdDate;
     }
 
-    @AerospikeRecord(namespace = "test", set = "account")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = ACCOUNT_SET)
     public static class Account {
         @AerospikeKey
         public long id;
@@ -35,6 +55,8 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
     }
 
     public void runEmbed() {
+        // Product is encoded positionally in the account record because this field uses
+        // LIST embedding. It is not written to PRODUCT_SET by this save.
         Product product = new Product();
         product.createdDate = new Date();
         product.name = "Sample Product";
@@ -50,7 +72,10 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         mapper.save(account);
     }
 
-    @AerospikeRecord(namespace = "test", set = "people", mapAll = false)
+    @AerospikeRecord(
+            namespace = "${aerospike.examples.namespace:test}",
+            set = PEOPLE_SET,
+            mapAll = false)
     public static class Person {
 
         @AerospikeKey
@@ -66,23 +91,32 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         public int age;
 
         @AerospikeBin(name = "primAcc")
+        // DIGEST stores the referenced account's digest rather than its user key.
         @AerospikeReference(type = ReferenceType.DIGEST)
         public Account primaryAccount;
 
         @AerospikeBin(name = "accts")
+        // Lazy references defer loading until application code reads the collection.
         @AerospikeReference(lazy = true)
         public List<Account> accounts;
     }
 
     private AeroMapper mapper;
 
-    //@BeforeEach
-    public void setup() {
-        mapper = new AeroMapper.Builder(session).build();
-        session.truncate(DataSet.of(NAMESPACE, "people"));
-        session.truncate(DataSet.of(NAMESPACE, "account"));
+    @Override
+    public void run(ExampleContext context) {
+        mapper = new AeroMapper.Builder(context.session()).build();
+
+        // Execute every demonstration that existed in the legacy class. Set lifecycle
+        // belongs to the registry fixture, so these methods remain focused on API use.
+        runEmbed();
+        run();
+        testListOrdering();
+        testAccounts();
+        showParentWithChildren(context);
     }
 
+    /** Demonstrates explicitly mapped fields plus eager and lazy references. */
     public void run() {
         Account account = new Account();
         account.id = 103;
@@ -120,14 +154,14 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
 
     }
 
-    @AerospikeRecord(namespace = "test", set = "testSet")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = VERSIONED_SET)
     public static class IntContainer {
         public int a;
         public int b;
         public int c;
     }
 
-    @AerospikeRecord(namespace = "test", set = "testSet")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = VERSIONED_SET)
     public static class IntMapper {
         @AerospikeKey
         public int id;
@@ -135,8 +169,13 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         public IntContainer container;
     }
 
-    @AerospikeRecord(namespace = "test", set = "testSet", version = 2)
+    @AerospikeRecord(
+            namespace = "${aerospike.examples.namespace:test}",
+            set = VERSIONED_SET,
+            version = 2)
     public static class IntContainerV2 {
+        // Version one stored a/b/c. Version two removes a and appends d while preserving
+        // the positional meaning of the existing b/c list entries.
         @AerospikeVersion(max = 1)
         public int a;
         public int b;
@@ -145,7 +184,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         public int d;
     }
 
-    @AerospikeRecord(namespace = "test", set = "testSet")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = VERSIONED_SET)
     public static class IntMapperV2 {
         @AerospikeKey
         public int id;
@@ -154,6 +193,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
     }
 
     public void testListOrdering() {
+        // Save a version-one list and read it through the version-two schema.
         IntContainer container = new IntContainer();
         container.a = 1;
         container.b = 2;
@@ -185,12 +225,17 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         SAVINGS, CHEQUING
     }
 
-    @AerospikeRecord(namespace = "test", set = "accounts")
+    @AerospikeRecord(
+            namespace = "${aerospike.examples.namespace:test}",
+            set = TRANSACTION_ACCOUNT_SET)
     public static class Accounts {
         @AerospikeKey
         public int id;
         public String name;
         public AccountType type;
+
+        // Each map value is a positional list. @AerospikeOrdinal below determines the
+        // value used for ordered collection operations.
         @AerospikeEmbed(elementType = EmbedType.LIST)
         public Map<String, Transactions> transactions;
 
@@ -206,7 +251,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         }
     }
 
-    @AerospikeRecord(namespace = "test", set = "txns")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = TRANSACTION_SET)
     public static class Transactions {
         public String txnId;
         @AerospikeOrdinal()
@@ -227,6 +272,8 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
     }
 
     public void testAccounts() {
+        // Instant values make transaction chronology explicit while the map key keeps
+        // each transaction directly addressable by its business identifier.
         Accounts account = new Accounts(1, "Savings Account", AccountType.SAVINGS);
         Transactions txn1 = new Transactions("Txn1", Instant.now(), 100.0, "Bob's store");
         Transactions txn2 = new Transactions("Txn2", Instant.now().minus(Duration.ofHours(8)), 134.99, "Kim's store");
@@ -240,7 +287,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         System.out.println("done");
     }
 
-    @AerospikeRecord(namespace = "test", set = "parent")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = PARENT_SET)
     public static class Parent {
         @AerospikeKey
         int id;
@@ -265,7 +312,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         }
     }
 
-    @AerospikeRecord(namespace = "test", set = "parent")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = PARENT_SET)
     public static class ParentWithBadChild {
         @AerospikeKey
         int id;
@@ -290,7 +337,7 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         }
     }
 
-    @AerospikeRecord(namespace = "test", set = "child")
+    @AerospikeRecord(namespace = "${aerospike.examples.namespace:test}", set = CHILD_SET)
     public static class Child {
         @AerospikeKey
         int id;
@@ -305,23 +352,56 @@ public class AeroMapperDocExamples extends AeroMapperBaseTest {
         }
     }
 
-    public void showParentWithChildren() {
+    public void showParentWithChildren(ExampleContext context) {
+        // The same Child is embedded twice and referenced once, illustrating that field
+        // annotations—not the Java type alone—control persisted representation.
         Child child = new Child(1, "child", new Date());
         Parent parent = new Parent(10, "parent", child);
         mapper.save(parent);
 
         ParentWithBadChild parent2 = new ParentWithBadChild(11, "parent2", child);
-        try {
-            mapper.save(parent2);
-            fail();
-        } catch (AerospikeException ae) {
-            // Expected
-        }
+        expectThrows(AerospikeException.class, () -> mapper.save(parent2),
+                "lazy reference to an unsaved child should be rejected");
 
-        // Since the child is referenced, it needs to be saved explicitly in the database
-        // If it were only embedded, it would not be necessary to save explicitly.
+        // Since the child is referenced, it must also be saved as its own record.
+        // If it were only embedded, this explicit save would not be necessary.
         mapper.save(child);
-        // TODO: Validate the results
-        System.out.println("done");
+
+        /*
+         * Inspect the stored parent to verify that each annotation selected its intended
+         * physical representation. A direct Parent read is deliberately avoided here:
+         * its constructor binds one Child parameter to three fields with different
+         * encodings, which is useful for illustrating writes but is not an unambiguous
+         * constructor-hydration contract.
+         */
+        Record storedParent = readRawRecord(context, PARENT_SET, parent.id);
+        require(storedParent != null, "parent record should exist");
+        equal((long) parent.id, storedParent.getLong("id"), "stored parent key");
+        equal(parent.name, storedParent.getString("name"), "stored parent name");
+        require(storedParent.getValue("mapEmbedChild") instanceof Map,
+                "MAP-embedded child should be stored as a map");
+        require(storedParent.getValue("listEmbedChild") instanceof List,
+                "LIST-embedded child should be stored as a list");
+        require(storedParent.getValue("refChild") != null,
+                "DIGEST reference should be stored in the parent");
+
+        // Reading the independently saved Child proves that the stored digest has a
+        // valid target record with the original domain values.
+        assertChild(child, mapper.read(Child.class, child.id), "referenced child");
+    }
+
+    private static void assertChild(Child expected, Child actual, String description) {
+        require(actual != null, description + " should load");
+        equal(expected.id, actual.id, description + " id");
+        equal(expected.name, actual.name, description + " name");
+        equal(expected.date, actual.date, description + " date");
+    }
+
+    private static Record readRawRecord(ExampleContext context, String set, Object userKey) {
+        Key key = new Key(context.namespace(), set, Value.get(userKey));
+        try (RecordStream stream = context.session().query(List.of(key)).execute()) {
+            RecordResult result = stream.hasNext() ? stream.next() : null;
+            return result != null && result.isOk() ? result.getRecord() : null;
+        }
     }
 }
