@@ -1,7 +1,11 @@
 package com.aerospike.mapper.generation;
 
 import com.aerospike.client.sdk.AerospikeException;
+import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.RecordMappingFactory;
 import com.aerospike.client.sdk.ResultCode;
+import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.mapper.annotations.AerospikeGeneration;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
@@ -33,7 +37,8 @@ public final class OptimisticLockingExample implements RunnableExample {
 
     @Override
     public void run(ExampleContext context) {
-        AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
+        Session session = context.session();
+        AeroMapper mapper = new AeroMapper.Builder(session).build();
 
         // A record created by insert() starts at server generation 1.
         mapper.insert(new Document("document-1", "initial"));
@@ -58,6 +63,55 @@ public final class OptimisticLockingExample implements RunnableExample {
         } catch (AerospikeException expected) {
             conflict = expected;
         }
+
+        // SDK-primary object writes use mapper serialization, but write behavior remains
+        // under SDK control. In particular, the generation check must be explicit.
+        Cluster cluster = context.cluster();
+        RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+        AerospikeException sdkConflict = null;
+        Document sdkWinner;
+        try {
+            cluster.setRecordMappingFactory(mapper.asMappingFactory());
+            TypedDataSet<Document> documents = mapper.getTypedDataSet(Document.class);
+
+            session.insert(documents)
+                    .object(new Document("sdk-document-1", "initial"))
+                    .execute()
+                    .close();
+            Document sdkFirstWriter = session.query(documents.id("sdk-document-1"))
+                    .execute()
+                    .getFirstObject()
+                    .orElseThrow();
+            Document sdkStaleWriter = session.query(documents.id("sdk-document-1"))
+                    .execute()
+                    .getFirstObject()
+                    .orElseThrow();
+
+            sdkFirstWriter.value = "SDK winner";
+            session.replace(documents)
+                    .object(sdkFirstWriter)
+                    .ensureGenerationIs(sdkFirstWriter.generation)
+                    .execute()
+                    .close();
+
+            sdkStaleWriter.value = "SDK stale";
+            try {
+                session.replace(documents)
+                        .object(sdkStaleWriter)
+                        .ensureGenerationIs(sdkStaleWriter.generation)
+                        .execute()
+                        .close();
+            } catch (AerospikeException expected) {
+                sdkConflict = expected;
+            }
+
+            sdkWinner = session.query(documents.id("sdk-document-1"))
+                    .execute()
+                    .getFirstObject()
+                    .orElseThrow();
+        } finally {
+            cluster.setRecordMappingFactory(previousFactory);
+        }
         // @end region="generation-check"
 
         require(conflict != null, "a stale generation must be rejected");
@@ -65,5 +119,10 @@ public final class OptimisticLockingExample implements RunnableExample {
         Document winner = mapper.read(Document.class, "document-1");
         equal("winner", winner.value, "winning value");
         equal(2, winner.generation, "winning generation");
+
+        require(sdkConflict != null, "the SDK stale generation must be rejected");
+        equal(ResultCode.GENERATION_ERROR, sdkConflict.getResultCode(), "SDK conflict result code");
+        equal("SDK winner", sdkWinner.value, "SDK winning value");
+        equal(2, sdkWinner.generation, "SDK winning generation");
     }
 }

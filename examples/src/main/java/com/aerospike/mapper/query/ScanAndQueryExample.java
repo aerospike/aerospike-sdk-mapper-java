@@ -1,5 +1,10 @@
 package com.aerospike.mapper.query;
 
+import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.RecordMappingFactory;
+import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.TypedDataSet;
+import com.aerospike.client.sdk.TypedRecordStream;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
@@ -39,7 +44,8 @@ public final class ScanAndQueryExample implements RunnableExample {
 
     @Override
     public void run(ExampleContext context) {
-        AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
+        Session session = context.session();
+        AeroMapper mapper = new AeroMapper.Builder(session).build();
 
         // @start region="scan-query"
         // save() accepts varargs, so several independent records can be written together.
@@ -50,29 +56,73 @@ public final class ScanAndQueryExample implements RunnableExample {
                 new Person(4, "Fifty", 50),
                 new Person(5, "Sixty", 60));
 
+        String workingAgeFilter = "$.age >= 30 and $.age <= 50";
+
+        // The mapper API provides concise scan and query operations.
         // scan() reads every record in the mapped set and requires no query expression.
-        List<Person> allPeople = mapper.scan(Person.class);
+        List<Person> mapperAllPeople = mapper.scan(Person.class);
 
         // query() applies an Aerospike Expression Language expression on the server.
         // This range query requires the integer "age" index owned by the fixture.
-        List<Person> workingAge = mapper.query(
-                Person.class, "$.age >= 30 and $.age <= 50");
+        List<Person> mapperWorkingAge = mapper.query(Person.class, workingAgeFilter);
 
         // Query result order is not guaranteed, so sort before relying on order.
-        workingAge.sort(java.util.Comparator.comparingInt(person -> person.age));
+        mapperWorkingAge.sort(java.util.Comparator.comparingInt(person -> person.age));
 
-        AtomicInteger processed = new AtomicInteger();
+        AtomicInteger mapperProcessed = new AtomicInteger();
         // The processor overload streams mapped records to a callback.
         // Returning false stops processing immediately.
         mapper.query(Person.class, person -> {
-            processed.incrementAndGet();
+            mapperProcessed.incrementAndGet();
             return false;
-        }, "$.age >= 30 and $.age <= 50");
+        }, workingAgeFilter);
+
+        // Applications can instead use the SDK Session for database operations and
+        // use the mapper only to provide dataset metadata and object mapping.
+        Cluster cluster = context.cluster();
+        RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+        List<Person> sdkAllPeople;
+        List<Person> sdkWorkingAge;
+        int sdkProcessed;
+        try {
+            cluster.setRecordMappingFactory(mapper.asMappingFactory());
+            TypedDataSet<Person> people = mapper.getTypedDataSet(Person.class);
+
+            // session.query() without a where clause performs the same full-set scan.
+            sdkAllPeople = session.query(people)
+                    .execute()
+                    .toObjectList();
+
+            // The SDK owns the query behavior; its typed result stream asks the
+            // mapper-backed factory to materialize each Person.
+            sdkWorkingAge = session.query(people)
+                    .where(workingAgeFilter)
+                    .execute()
+                    .toObjectList();
+            sdkWorkingAge.sort(java.util.Comparator.comparingInt(person -> person.age));
+
+            // Close a partially consumed stream to stop the server query early.
+            try (TypedRecordStream<Person> records = session.query(people)
+                    .where(workingAgeFilter)
+                    .execute()) {
+                sdkProcessed = records.popObject().isPresent() ? 1 : 0;
+            }
+        } finally {
+            // The example runner shares its cluster, so do not leak global mapping state.
+            cluster.setRecordMappingFactory(previousFactory);
+        }
         // @end region="scan-query"
 
-        equal(5, allPeople.size(), "scan count");
-        equal(List.of(30, 40, 50), workingAge.stream().map(person -> person.age).toList(),
-                "query ages");
-        equal(1, processed.get(), "callback abort count");
+        equal(5, mapperAllPeople.size(), "mapper scan count");
+        equal(List.of(30, 40, 50),
+                mapperWorkingAge.stream().map(person -> person.age).toList(),
+                "mapper query ages");
+        equal(1, mapperProcessed.get(), "mapper callback abort count");
+
+        equal(5, sdkAllPeople.size(), "SDK scan count");
+        equal(List.of(30, 40, 50),
+                sdkWorkingAge.stream().map(person -> person.age).toList(),
+                "SDK query ages");
+        equal(1, sdkProcessed, "SDK early close count");
     }
 }

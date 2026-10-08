@@ -1,5 +1,9 @@
 package com.aerospike.mapper.relationships;
 
+import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.RecordMappingFactory;
+import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.mapper.annotations.AerospikeEmbed;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
@@ -82,7 +86,8 @@ public final class RelationshipsExample implements RunnableExample {
 
     @Override
     public void run(ExampleContext context) {
-        AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
+        Session session = context.session();
+        AeroMapper mapper = new AeroMapper.Builder(session).build();
 
         // @start region="relationships"
         // Referenced objects must exist independently, so call save() for the accounts
@@ -99,17 +104,45 @@ public final class RelationshipsExample implements RunnableExample {
         mapper.save(ada);
 
         // A normal read() call hydrates the embedded Address and resolves both references.
-        Person loaded = mapper.read(Person.class, "person-1");
+        Person mapperLoaded = mapper.read(Person.class, "person-1");
 
         // Parent batch reads also batch-load referenced account collections.
-        Person[] batch = mapper.read(Person.class, new Object[] {"person-1"});
+        Person[] mapperBatch = mapper.read(Person.class, new Object[] {"person-1"});
+
+        // The same relationship mapping works when the SDK owns the read operation.
+        // Typed Session reads supply the context that the mapper uses to batch-load
+        // referenced Account records.
+        Cluster cluster = context.cluster();
+        RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+        Person sdkLoaded;
+        List<Person> sdkBatch;
+        try {
+            cluster.setRecordMappingFactory(mapper.asMappingFactory());
+            TypedDataSet<Person> people = mapper.getTypedDataSet(Person.class);
+
+            sdkLoaded = session.query(people.id("person-1"))
+                    .execute()
+                    .getFirstObject()
+                    .orElse(null);
+            sdkBatch = session.query(people.ids("person-1"))
+                    .execute()
+                    .toObjectList();
+        } finally {
+            cluster.setRecordMappingFactory(previousFactory);
+        }
         // @end region="relationships"
 
-        require(loaded != null, "person should load");
-        equal("person-1", loaded.id, "metadata key should be restored");
-        equal("London", loaded.address.city, "embedded address");
-        equal(2, loaded.accounts.size(), "referenced accounts");
-        equal("Checking", loaded.accounts.get(0).name, "first account");
-        equal("Savings", batch[0].accounts.get(1).name, "batch-loaded account");
+        require(mapperLoaded != null, "person should load");
+        equal("person-1", mapperLoaded.id, "metadata key should be restored");
+        equal("London", mapperLoaded.address.city, "embedded address");
+        equal(2, mapperLoaded.accounts.size(), "referenced accounts");
+        equal("Checking", mapperLoaded.accounts.get(0).name, "first account");
+        equal("Savings", mapperBatch[0].accounts.get(1).name, "batch-loaded account");
+
+        require(sdkLoaded != null, "SDK typed person should load");
+        equal("person-1", sdkLoaded.id, "SDK typed metadata key");
+        equal("London", sdkLoaded.address.city, "SDK typed embedded address");
+        equal("Checking", sdkLoaded.accounts.get(0).name, "SDK typed reference");
+        equal("Savings", sdkBatch.getFirst().accounts.get(1).name, "SDK typed batch reference");
     }
 }

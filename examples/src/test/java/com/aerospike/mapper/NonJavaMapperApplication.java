@@ -2,8 +2,6 @@ package com.aerospike.mapper;
 
 import com.aerospike.client.sdk.Key;
 import com.aerospike.client.sdk.Record;
-import com.aerospike.client.sdk.RecordResult;
-import com.aerospike.client.sdk.RecordStream;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.model.Customer;
@@ -12,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
 import java.util.Date;
-import java.util.List;
 
 import static com.aerospike.mapper.ExampleAssertions.equal;
 
@@ -45,14 +42,12 @@ public class NonJavaMapperApplication extends ApplicationBase implements Runnabl
 
     private Customer read(Session session, String namespace, String id) {
         Key key = new Key(namespace, Customer.SET, Value.get(id));
-        Record record;
 
-        // The SDK query returns a closeable stream of per-key results. This example
-        // reads its single result and reconstructs the domain object by hand.
-        try (RecordStream stream = session.query(List.of(key)).execute()) {
-            RecordResult rr = stream.hasNext() ? stream.next() : null;
-            record = (rr != null && rr.isOk()) ? rr.getRecord() : null;
-        }
+        // getFirstRecord() is the terminal point-query operation and closes its result
+        // stream automatically. This example then reconstructs the domain object by hand.
+        Record record = session.query(key)
+                .execute()
+                .getFirstRecord();
 
         Customer result = new Customer(record.getString("id"),
                 record.getString("firstName"),

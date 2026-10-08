@@ -1,6 +1,9 @@
 package com.aerospike.mapper.configuration;
 
+import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.RecordMappingFactory;
 import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.FromAerospike;
@@ -10,7 +13,6 @@ import com.aerospike.mapper.RunnableExample;
 import com.aerospike.mapper.tools.AeroMapper;
 import com.aerospike.mapper.tools.configuration.ClassConfig;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -89,15 +91,51 @@ public final class ConfigurationExample implements RunnableExample {
 
         // Load the checked-in YAML through the classpath, then build a mapper that uses
         // those external class definitions.
-        byte[] yaml = configuredYaml(namespace);
+        String yaml = configuredYaml(namespace);
         AeroMapper yamlMapper = new AeroMapper.Builder(session)
-                .withConfigurationFile(new ByteArrayInputStream(yaml))
+                .withConfiguration(yaml)
                 .build();
         YamlPerson yamlPerson = new YamlPerson("yaml-1", "Ada Lovelace");
         yamlMapper.save(yamlPerson);
         YamlPerson yamlLoaded = yamlMapper.read(YamlPerson.class, "yaml-1");
         equal("Ada Lovelace", yamlLoaded.name, "YAML round trip");
         equal("fullName", yamlMapper.getBinNames(YamlPerson.class).get("name"), "YAML bin name");
+
+        // @start region="configured-sdk-mapping"
+        // SDK typed operations can reuse mappings supplied by YAML, even though the
+        // domain class itself has no mapper annotations.
+        Cluster cluster = context.cluster();
+        RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+        YamlPerson sdkYamlLoaded;
+        try {
+            cluster.setRecordMappingFactory(yamlMapper.asMappingFactory());
+            TypedDataSet<YamlPerson> yamlPeople =
+                    yamlMapper.getTypedDataSet(YamlPerson.class);
+
+            session.insert(yamlPeople)
+                    .object(new YamlPerson("yaml-sdk-1", "Katherine Johnson"))
+                    .execute()
+                    .close();
+
+            // Mapper metadata also supplies the externally configured stored bin name
+            // for an ordinary SDK update.
+            String nameBin = yamlMapper.getBinNames(YamlPerson.class).get("name");
+            session.update(yamlPeople.id("yaml-sdk-1"))
+                    .bin(nameBin)
+                    .setTo("K. Johnson")
+                    .execute()
+                    .close();
+
+            sdkYamlLoaded = session.query(yamlPeople.id("yaml-sdk-1"))
+                    .execute()
+                    .getFirstObject()
+                    .orElseThrow();
+        } finally {
+            cluster.setRecordMappingFactory(previousFactory);
+        }
+        // @end region="configured-sdk-mapping"
+
+        equal("K. Johnson", sdkYamlLoaded.name, "SDK YAML-configured mapping");
 
         // @start region="code-configuration"
         // ClassConfig is useful when a class cannot be annotated or when mappings are
@@ -129,14 +167,14 @@ public final class ConfigurationExample implements RunnableExample {
         equal(new Money(12345), wallet.balance, "converter round trip");
     }
 
-    private byte[] configuredYaml(String namespace) throws IOException {
+    private String configuredYaml(String namespace) throws IOException {
         ClassLoader loader = ConfigurationExample.class.getClassLoader();
         try (InputStream input = loader.getResourceAsStream("mappings/example-mapping.yaml")) {
             require(input != null, "Missing mappings/example-mapping.yaml");
             String yaml = new String(input.readAllBytes(), StandardCharsets.UTF_8);
 
-            // External configuration values do not use annotation placeholder
-            // expansion. Replace the single checked-in default namespace explicitly
+            // External configuration values do not use annotation placeholder expansion.
+            // Replace the single checked-in default namespace explicitly
             // when the runner targets another namespace.
             String marker = "namespace: test";
             int first = yaml.indexOf(marker);
@@ -145,7 +183,7 @@ public final class ConfigurationExample implements RunnableExample {
             if (!"test".equals(namespace)) {
                 yaml = yaml.replace(marker, "namespace: " + namespace);
             }
-            return yaml.getBytes(StandardCharsets.UTF_8);
+            return yaml;
         }
     }
 }

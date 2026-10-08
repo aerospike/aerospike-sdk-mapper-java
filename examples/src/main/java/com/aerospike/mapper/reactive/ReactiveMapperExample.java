@@ -1,10 +1,15 @@
 package com.aerospike.mapper.reactive;
 
+import com.aerospike.client.sdk.Cluster;
+import com.aerospike.client.sdk.ErrorStrategy;
+import com.aerospike.client.sdk.RecordMappingFactory;
 import com.aerospike.client.sdk.Session;
+import com.aerospike.client.sdk.TypedDataSet;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.ExampleContext;
 import com.aerospike.mapper.RunnableExample;
+import com.aerospike.mapper.tools.IAeroMapper;
 import com.aerospike.mapper.tools.ReactiveAeroMapper;
 
 import java.time.Duration;
@@ -54,6 +59,24 @@ public final class ReactiveMapperExample implements RunnableExample {
         ada.age = 37;
         mapper.update(ada, "age").get(5, TimeUnit.SECONDS);
 
+        // The SDK also exposes native asynchronous execution. Here the Session owns
+        // the async read while the mapper supplies only typed object materialization.
+        IAeroMapper mappingMapper = mapper.asMapper();
+        Cluster cluster = context.cluster();
+        RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+        Person sdkAda;
+        try {
+            cluster.setRecordMappingFactory(mappingMapper.asMappingFactory());
+            TypedDataSet<Person> people = mappingMapper.getTypedDataSet(Person.class);
+            sdkAda = session.query(people.id("person-1"))
+                    .executeAsync(ErrorStrategy.IN_STREAM)
+                    .asCompletableFutureMappedSingle()
+                    .get(5, TimeUnit.SECONDS)
+                    .orElse(null);
+        } finally {
+            cluster.setRecordMappingFactory(previousFactory);
+        }
+
         // Scans and queries use the standard java.util.concurrent.Flow API. Subscribe
         // promptly: the current publisher starts producing as soon as scan() is called.
         Flow.Publisher<Person> publisher = mapper.scan(Person.class);
@@ -63,6 +86,8 @@ public final class ReactiveMapperExample implements RunnableExample {
         // onError(), and cancels the subscription if the timeout expires.
         List<Person> observed = drainPublisher(publisher, Duration.ofSeconds(5));
         require(observed != null, "publisher should complete without error");
+        require(sdkAda != null, "SDK async typed read should return the person");
+        equal(37, sdkAda.age, "SDK async mapped age");
         equal(37, mapper.read(Person.class, "person-1").get(5, TimeUnit.SECONDS).age,
                 "selected-bin reactive update");
         require(mapper.delete(Person.class, "person-1").get(5, TimeUnit.SECONDS),

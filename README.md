@@ -8,7 +8,7 @@ references, embeds, and database-backed virtual lists.
 
 ## Requirements
 
-- Java 21
+- JDK 21
 - Aerospike Server version >= 8.2.0.0
 
 ## Installation
@@ -288,7 +288,8 @@ Person[] people = mapper.read(
 
 ### Scans and AEL queries
 
-Use `scan` for a full set and `query` for an Aerospike Expression Language filter:
+Use the mapper's `scan` and `query` convenience methods, or keep query behavior in the
+SDK `Session` and use the mapper only for dataset metadata and object materialization:
 
 <!-- example-region:scan-query:start -->
 ```java
@@ -300,32 +301,72 @@ mapper.save(
         new Person(4, "Fifty", 50),
         new Person(5, "Sixty", 60));
 
+String workingAgeFilter = "$.age >= 30 and $.age <= 50";
+
+// The mapper API provides concise scan and query operations.
 // scan() reads every record in the mapped set and requires no query expression.
-List<Person> allPeople = mapper.scan(Person.class);
+List<Person> mapperAllPeople = mapper.scan(Person.class);
 
 // query() applies an Aerospike Expression Language expression on the server.
 // This range query requires the integer "age" index owned by the fixture.
-List<Person> workingAge = mapper.query(
-        Person.class, "$.age >= 30 and $.age <= 50");
+List<Person> mapperWorkingAge = mapper.query(Person.class, workingAgeFilter);
 
 // Query result order is not guaranteed, so sort before relying on order.
-workingAge.sort(java.util.Comparator.comparingInt(person -> person.age));
+mapperWorkingAge.sort(java.util.Comparator.comparingInt(person -> person.age));
 
-AtomicInteger processed = new AtomicInteger();
+AtomicInteger mapperProcessed = new AtomicInteger();
 // The processor overload streams mapped records to a callback.
 // Returning false stops processing immediately.
 mapper.query(Person.class, person -> {
-    processed.incrementAndGet();
+    mapperProcessed.incrementAndGet();
     return false;
-}, "$.age >= 30 and $.age <= 50");
+}, workingAgeFilter);
+
+// Applications can instead use the SDK Session for database operations and
+// use the mapper only to provide dataset metadata and object mapping.
+Cluster cluster = context.cluster();
+RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+List<Person> sdkAllPeople;
+List<Person> sdkWorkingAge;
+int sdkProcessed;
+try {
+    cluster.setRecordMappingFactory(mapper.asMappingFactory());
+    TypedDataSet<Person> people = mapper.getTypedDataSet(Person.class);
+
+    // session.query() without a where clause performs the same full-set scan.
+    sdkAllPeople = session.query(people)
+            .execute()
+            .toObjectList();
+
+    // The SDK owns the query behavior; its typed result stream asks the
+    // mapper-backed factory to materialize each Person.
+    sdkWorkingAge = session.query(people)
+            .where(workingAgeFilter)
+            .execute()
+            .toObjectList();
+    sdkWorkingAge.sort(java.util.Comparator.comparingInt(person -> person.age));
+
+    // Close a partially consumed stream to stop the server query early.
+    try (TypedRecordStream<Person> records = session.query(people)
+            .where(workingAgeFilter)
+            .execute()) {
+        sdkProcessed = records.popObject().isPresent() ? 1 : 0;
+    }
+} finally {
+    // The example runner shares its cluster, so do not leak global mapping state.
+    cluster.setRecordMappingFactory(previousFactory);
+}
 ```
 
 [Region source](examples/src/main/java/com/aerospike/mapper/query/ScanAndQueryExample.java)
 <!-- example-region:scan-query:end -->
 
-The callback overload stops when the processor returns `false`. Query filters are AEL
-strings, and the server must have any secondary index needed by the expression. Legacy
-client `Filter`, `QueryPolicy`, and `Exp` mapper overloads are not part of this API.
+The mapper callback overload stops when the processor returns `false`. In the SDK-first
+form, register `mapper.asMappingFactory()` on the cluster and query the mapper-provided
+`TypedDataSet`. Typed terminal operations such as `toObjectList()` close their streams;
+close a manually consumed stream to stop a query early. Query filters are AEL strings,
+and the server must have any secondary index needed by the expression. Legacy client
+`Filter`, `QueryPolicy`, and `Exp` mapper overloads are not part of the mapper API.
 
 ## Mapping Java objects
 
@@ -463,10 +504,32 @@ ada.accounts = List.of(checking, savings);
 mapper.save(ada);
 
 // A normal read() call hydrates the embedded Address and resolves both references.
-Person loaded = mapper.read(Person.class, "person-1");
+Person mapperLoaded = mapper.read(Person.class, "person-1");
 
 // Parent batch reads also batch-load referenced account collections.
-Person[] batch = mapper.read(Person.class, new Object[] {"person-1"});
+Person[] mapperBatch = mapper.read(Person.class, new Object[] {"person-1"});
+
+// The same relationship mapping works when the SDK owns the read operation.
+// Typed Session reads supply the context that the mapper uses to batch-load
+// referenced Account records.
+Cluster cluster = context.cluster();
+RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+Person sdkLoaded;
+List<Person> sdkBatch;
+try {
+    cluster.setRecordMappingFactory(mapper.asMappingFactory());
+    TypedDataSet<Person> people = mapper.getTypedDataSet(Person.class);
+
+    sdkLoaded = session.query(people.id("person-1"))
+            .execute()
+            .getFirstObject()
+            .orElse(null);
+    sdkBatch = session.query(people.ids("person-1"))
+            .execute()
+            .toObjectList();
+} finally {
+    cluster.setRecordMappingFactory(previousFactory);
+}
 ```
 
 [Region source](examples/src/main/java/com/aerospike/mapper/relationships/RelationshipsExample.java)
@@ -476,6 +539,9 @@ Non-lazy dependencies are resolved in batches where possible. `lazy = true` crea
 placeholder with its key populated but does not load the rest of the child.
 `type = ReferenceType.DIGEST` stores a digest instead of an ID. Digest references cannot
 be lazy because the digest cannot be represented in the child's ordinary key field.
+Typed SDK reads follow the same hydration path: install `mapper.asMappingFactory()` and
+query a mapper-provided `TypedDataSet` so the SDK supplies the `RecordReadContext` used
+to resolve references.
 
 Use `@AerospikeEmbed` when the child belongs inside the parent record, as shown by the
 `Address` field in the linked complete scenario.
@@ -596,6 +662,46 @@ classes:
 [Region source](examples/src/main/resources/mappings/example-mapping.yaml)
 <!-- example-region:yaml-configuration:end -->
 
+The same external mapping can drive typed SDK object operations:
+
+<!-- example-region:configured-sdk-mapping:start -->
+```java
+// SDK typed operations can reuse mappings supplied by YAML, even though the
+// domain class itself has no mapper annotations.
+Cluster cluster = context.cluster();
+RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+YamlPerson sdkYamlLoaded;
+try {
+    cluster.setRecordMappingFactory(yamlMapper.asMappingFactory());
+    TypedDataSet<YamlPerson> yamlPeople =
+            yamlMapper.getTypedDataSet(YamlPerson.class);
+
+    session.insert(yamlPeople)
+            .object(new YamlPerson("yaml-sdk-1", "Katherine Johnson"))
+            .execute()
+            .close();
+
+    // Mapper metadata also supplies the externally configured stored bin name
+    // for an ordinary SDK update.
+    String nameBin = yamlMapper.getBinNames(YamlPerson.class).get("name");
+    session.update(yamlPeople.id("yaml-sdk-1"))
+            .bin(nameBin)
+            .setTo("K. Johnson")
+            .execute()
+            .close();
+
+    sdkYamlLoaded = session.query(yamlPeople.id("yaml-sdk-1"))
+            .execute()
+            .getFirstObject()
+            .orElseThrow();
+} finally {
+    cluster.setRecordMappingFactory(previousFactory);
+}
+```
+
+[Region source](examples/src/main/java/com/aerospike/mapper/configuration/ConfigurationExample.java)
+<!-- example-region:configured-sdk-mapping:end -->
+
 [Complete runnable configuration scenario](examples/src/main/java/com/aerospike/mapper/configuration/ConfigurationExample.java)
 
 The current YAML model supports class settings including `class`, `namespace`, `set`,
@@ -634,7 +740,8 @@ Mark one `int` or `Integer` field or getter/setter property with
 `@AerospikeGeneration`. Reads copy the server record generation into that member. A
 write with a non-zero value calls `ensureGenerationIs`, so a stale object fails instead
 of silently overwriting a newer generation. The generation is metadata and is not
-stored as a bin.
+stored as a bin. SDK-primary object writes still use mapper serialization, but must call
+`ensureGenerationIs` explicitly because the SDK owns write behavior.
 
 <!-- example-region:generation-check:start -->
 ```java
@@ -654,6 +761,55 @@ try {
     mapper.save(staleWriter);
 } catch (AerospikeException expected) {
     conflict = expected;
+}
+
+// SDK-primary object writes use mapper serialization, but write behavior remains
+// under SDK control. In particular, the generation check must be explicit.
+Cluster cluster = context.cluster();
+RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+AerospikeException sdkConflict = null;
+Document sdkWinner;
+try {
+    cluster.setRecordMappingFactory(mapper.asMappingFactory());
+    TypedDataSet<Document> documents = mapper.getTypedDataSet(Document.class);
+
+    session.insert(documents)
+            .object(new Document("sdk-document-1", "initial"))
+            .execute()
+            .close();
+    Document sdkFirstWriter = session.query(documents.id("sdk-document-1"))
+            .execute()
+            .getFirstObject()
+            .orElseThrow();
+    Document sdkStaleWriter = session.query(documents.id("sdk-document-1"))
+            .execute()
+            .getFirstObject()
+            .orElseThrow();
+
+    sdkFirstWriter.value = "SDK winner";
+    session.replace(documents)
+            .object(sdkFirstWriter)
+            .ensureGenerationIs(sdkFirstWriter.generation)
+            .execute()
+            .close();
+
+    sdkStaleWriter.value = "SDK stale";
+    try {
+        session.replace(documents)
+                .object(sdkStaleWriter)
+                .ensureGenerationIs(sdkStaleWriter.generation)
+                .execute()
+                .close();
+    } catch (AerospikeException expected) {
+        sdkConflict = expected;
+    }
+
+    sdkWinner = session.query(documents.id("sdk-document-1"))
+            .execute()
+            .getFirstObject()
+            .orElseThrow();
+} finally {
+    cluster.setRecordMappingFactory(previousFactory);
 }
 ```
 
@@ -700,7 +856,9 @@ modify the collection in the in-memory owning POJO. Supported result modes are
 
 ### Reactive mapper
 
-`ReactiveAeroMapper` is an asynchronous facade over the same `Session`:
+`ReactiveAeroMapper` is an asynchronous facade over the same `Session`. Applications
+can also use native SDK `executeAsync` flows with the mapper supplying typed
+materialization:
 
 <!-- example-region:reactive-mapper:start -->
 ```java
@@ -719,6 +877,24 @@ Person ada = mapper.read(Person.class, "person-1")
 ada.age = 37;
 mapper.update(ada, "age").get(5, TimeUnit.SECONDS);
 
+// The SDK also exposes native asynchronous execution. Here the Session owns
+// the async read while the mapper supplies only typed object materialization.
+IAeroMapper mappingMapper = mapper.asMapper();
+Cluster cluster = context.cluster();
+RecordMappingFactory previousFactory = cluster.getRecordMappingFactory();
+Person sdkAda;
+try {
+    cluster.setRecordMappingFactory(mappingMapper.asMappingFactory());
+    TypedDataSet<Person> people = mappingMapper.getTypedDataSet(Person.class);
+    sdkAda = session.query(people.id("person-1"))
+            .executeAsync(ErrorStrategy.IN_STREAM)
+            .asCompletableFutureMappedSingle()
+            .get(5, TimeUnit.SECONDS)
+            .orElse(null);
+} finally {
+    cluster.setRecordMappingFactory(previousFactory);
+}
+
 // Scans and queries use the standard java.util.concurrent.Flow API. Subscribe
 // promptly: the current publisher starts producing as soon as scan() is called.
 Flow.Publisher<Person> publisher = mapper.scan(Person.class);
@@ -730,7 +906,8 @@ Flow.Publisher<Person> publisher = mapper.scan(Person.class);
 CRUD delegates to the synchronous mapper through `CompletableFuture.runAsync` or
 `supplyAsync`. Scans and queries return `Flow.Publisher`. This facade is not a separate
 fully non-blocking mapper and does not promise a particular executor or threading
-model.
+model. Native SDK `executeAsync` returns an asynchronous record stream whose terminal
+mapping methods produce `CompletableFuture` results.
 
 ## Logging
 
