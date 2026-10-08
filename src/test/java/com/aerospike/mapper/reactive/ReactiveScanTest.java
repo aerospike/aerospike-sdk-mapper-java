@@ -1,10 +1,14 @@
 package com.aerospike.mapper.reactive;
 
+import com.aerospike.client.sdk.DataSet;
+import com.aerospike.client.sdk.query.IndexType;
 import com.aerospike.mapper.annotations.AerospikeKey;
 import com.aerospike.mapper.annotations.AerospikeRecord;
 import com.aerospike.mapper.annotations.ParamFrom;
 import com.aerospike.mapper.tools.IAeroMapper;
 import com.aerospike.mapper.tools.ReactiveAeroMapper;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -12,6 +16,19 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ReactiveScanTest extends ReactiveAeroMapperBaseTest {
+    private static final DataSet DATA_SET = DataSet.of("test", "testScan");
+    private static final String NAME_INDEX = "mapper_reactive_scan_test_name_idx";
+
+    @BeforeAll
+    public static void createNameIndex() {
+        recreateIndex(DATA_SET, NAME_INDEX, "name", IndexType.STRING);
+    }
+
+    @AfterAll
+    public static void dropNameIndex() {
+        dropIndexIfPresent(DATA_SET, NAME_INDEX);
+    }
+
     @AerospikeRecord(namespace = "test", set = "testScan")
     public static class Person {
         @AerospikeKey
@@ -40,7 +57,7 @@ public class ReactiveScanTest extends ReactiveAeroMapperBaseTest {
     }
 
     private ReactiveAeroMapper populate() throws Exception {
-        truncateSet("test", "testScan");
+        session.truncate(DATA_SET);
         ReactiveAeroMapper reactiveMapper = new ReactiveAeroMapper.Builder(session).build();
         reactiveMapper.save(new Person(1, "Tim", 312)).get();
         reactiveMapper.save(new Person(2, "Bob", 44)).get();

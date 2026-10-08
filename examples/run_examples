@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+extra_maven_args=()
+if [[ -n "${MAVEN_ARGS:-}" ]]; then
+    read -r -a extra_maven_args <<< "$MAVEN_ARGS"
+fi
+
+exec mvn "${extra_maven_args[@]}" -Pexamples -DskipTests test-compile exec:java -Dexec.args="$*"
