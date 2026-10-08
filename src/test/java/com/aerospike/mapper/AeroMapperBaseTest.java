@@ -19,12 +19,11 @@ import com.aerospike.client.sdk.policy.Behavior;
 import com.aerospike.client.sdk.query.IndexCollectionType;
 import com.aerospike.client.sdk.query.IndexType;
 import com.aerospike.mapper.tools.ClassCache;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
 
 public abstract class AeroMapperBaseTest {
 
@@ -91,19 +90,15 @@ public abstract class AeroMapperBaseTest {
     }
 
     public void compare(Object original, Object read, boolean showObjects) {
-        try {
-            ObjectWriter objectWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
-            String readString = objectWriter.writeValueAsString(read);
-            if (showObjects) {
-                System.out.println("------ Read Data -----\n" + readString);
-            }
-            String originalObject = objectWriter.writeValueAsString(original);
-            if (showObjects) {
-                System.out.println("------ Original Data -----\n" + originalObject);
-            }
-            assertEquals(originalObject, readString);
-        } catch (JsonProcessingException jpe) {
-            throw new RuntimeException(jpe);
+        ObjectWriter objectWriter = JsonMapper.builder().build().writerWithDefaultPrettyPrinter();
+        String readString = objectWriter.writeValueAsString(read);
+        if (showObjects) {
+            System.out.println("------ Read Data -----\n" + readString);
         }
+        String originalObject = objectWriter.writeValueAsString(original);
+        if (showObjects) {
+            System.out.println("------ Original Data -----\n" + originalObject);
+        }
+        assertEquals(originalObject, readString);
     }
 }

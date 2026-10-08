@@ -5,9 +5,8 @@ import com.aerospike.client.sdk.Record;
 import com.aerospike.client.sdk.Session;
 import com.aerospike.client.sdk.Value;
 import com.aerospike.mapper.model.Customer;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Date;
 
@@ -65,7 +64,7 @@ public class NonJavaMapperApplication extends ApplicationBase implements Runnabl
     }
 
     @Override
-    public void run(ExampleContext context) throws JsonProcessingException {
+    public void run(ExampleContext context) {
         Session session = context.session();
         Customer customer = createAndPopulateCustomer();
         save(session, context.namespace(), customer);
@@ -79,7 +78,7 @@ public class NonJavaMapperApplication extends ApplicationBase implements Runnabl
             System.out.printf("Customer graph read time: %.3fms%n", (System.nanoTime() - now) / 1000000f);
         }
 
-        ObjectWriter objectWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
+        ObjectWriter objectWriter = JsonMapper.builder().build().writerWithDefaultPrettyPrinter();
         String readString = objectWriter.writeValueAsString(customer2);
         System.out.println(readString);
         String originalObject = objectWriter.writeValueAsString(customer);

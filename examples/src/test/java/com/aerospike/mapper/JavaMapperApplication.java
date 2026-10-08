@@ -2,9 +2,8 @@ package com.aerospike.mapper;
 
 import com.aerospike.mapper.model.Customer;
 import com.aerospike.mapper.tools.AeroMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
 
 import static com.aerospike.mapper.ExampleAssertions.equal;
 
@@ -17,7 +16,7 @@ import static com.aerospike.mapper.ExampleAssertions.equal;
 public class JavaMapperApplication extends ApplicationBase implements RunnableExample {
 
     @Override
-    public void run(ExampleContext context) throws JsonProcessingException {
+    public void run(ExampleContext context) {
         // Cluster/session lifecycle belongs to MapperExamples; a scenario only consumes
         // the shared session and must not close it.
         AeroMapper mapper = new AeroMapper.Builder(context.session()).build();
@@ -34,7 +33,7 @@ public class JavaMapperApplication extends ApplicationBase implements RunnableEx
             System.out.printf("Customer graph read time: %.3fms%n", (System.nanoTime() - now) / 1000000f);
         }
 
-        ObjectWriter objectWriter = new ObjectMapper().writerWithDefaultPrettyPrinter();
+        ObjectWriter objectWriter = JsonMapper.builder().build().writerWithDefaultPrettyPrinter();
         String readString = objectWriter.writeValueAsString(customer2);
         System.out.println(readString);
         String originalObject = objectWriter.writeValueAsString(customer);
